@@ -5,6 +5,8 @@ const rateLimit = require("express-rate-limit");
 const { errorHandler, notFound } = require("./src/middlewares/error.middleware");
 const authRoutes = require("./src/modules/auth/auth.routes");
 const profilesRoutes = require("./src/modules/profiles/profiles.routes");
+const projectsRoutes = require("./src/modules/projects/projects.routes");
+const proposalsRoutes = require("./src/modules/proposals/proposals.routes");
 const { buildSwaggerSpec } = require("./src/docs/swagger");
 const { getSwaggerHtml } = require("./src/docs/swaggerPage");
 
@@ -48,10 +50,14 @@ app.use(limiter);
 // API v1 (الأساسي)
 app.use("/api/v1/auth", authLimiter, authRoutes);
 app.use("/api/v1/profiles", profilesRoutes);
+app.use("/api/v1/projects", projectsRoutes);
+app.use("/api/v1/proposals", proposalsRoutes);
 
 // Aliases بدون v1 (لو حد نسيها)
 app.use("/api/auth", authLimiter, authRoutes);
 app.use("/api/profiles", profilesRoutes);
+app.use("/api/projects", projectsRoutes);
+app.use("/api/proposals", proposalsRoutes);
 
 app.get("/", (req, res) => {
   res.redirect("/api-docs");
@@ -65,6 +71,8 @@ app.get("/api/v1", (req, res) => {
     endpoints: {
       auth: "/api/v1/auth",
       profiles: "/api/v1/profiles",
+      projects: "/api/v1/projects",
+      proposals: "/api/v1/proposals",
       health: "/health",
     },
   });

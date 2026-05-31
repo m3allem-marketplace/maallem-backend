@@ -48,10 +48,12 @@ const swaggerDocument = {
     title: "Maallem API",
     version: "1.0.0",
     description:
-      "Maallem backend — Authentication & Profiles (Worker / Company).\n\n" +
+      "Maallem backend — Authentication, Profiles, Projects & Proposals.\n\n" +
       "**Production:** https://maallem-backend.vercel.app\n\n" +
       "**Auth:** Register/login, refresh token, profile (`/me`).\n\n" +
-      "**Profiles:** Public listing by ID; worker/company manage their profile via `/worker/me` and `/company/me` (multipart for images).",
+      "**Profiles:** Public listing by ID; worker/company manage their profile via `/worker/me` and `/company/me` (multipart for images).\n\n" +
+      "**Projects:** Clients (`user` role) post and manage projects. Public listing and details.\n\n" +
+      "**Proposals:** Workers submit proposals on open projects. Clients accept/reject proposals.",
     contact: {
       name: "Maallem Team",
     },
@@ -62,6 +64,10 @@ const swaggerDocument = {
     { name: "Profiles - Companies (Public)", description: "No authentication required" },
     { name: "Profiles - Worker (Me)", description: "Worker role + Bearer token" },
     { name: "Profiles - Company (Me)", description: "Company role + Bearer token" },
+    { name: "Projects (Public)", description: "Public project listing and details" },
+    { name: "Projects (Client)", description: "Client (`user` role) + Bearer token" },
+    { name: "Proposals (Worker)", description: "Worker role + Bearer token" },
+    { name: "Proposals (Client)", description: "Client (`user` role) + Bearer token" },
   ],
   components: {
     securitySchemes: {
@@ -271,6 +277,111 @@ const swaggerDocument = {
           removeProjectImages: {
             type: "string",
             description: "URLs to remove — update only",
+          },
+        },
+      },
+      Project: {
+        type: "object",
+        properties: {
+          _id: { type: "string", example: "674a1b2c3d4e5f6789012345" },
+          client: { $ref: "#/components/schemas/UserPublic" },
+          title: { type: "string", example: "تصليح سباكة" },
+          description: { type: "string", example: "تسريب في الحمام يحتاج إصلاح عاجل" },
+          category: { type: "string", example: "plumbing" },
+          location: { $ref: "#/components/schemas/Location" },
+          budget: { type: "number", example: 500 },
+          status: {
+            type: "string",
+            enum: ["open", "closed", "in-progress"],
+            example: "open",
+          },
+          createdAt: { type: "string", format: "date-time" },
+          updatedAt: { type: "string", format: "date-time" },
+        },
+      },
+      CreateProjectRequest: {
+        type: "object",
+        required: ["title"],
+        properties: {
+          title: { type: "string", minLength: 3, maxLength: 200, example: "تصليح سباكة" },
+          description: { type: "string", maxLength: 5000, example: "تسريب في الحمام" },
+          category: { type: "string", maxLength: 100, example: "plumbing" },
+          location: { $ref: "#/components/schemas/Location" },
+          budget: { type: "number", minimum: 0, example: 500 },
+          status: {
+            type: "string",
+            enum: ["open", "closed", "in-progress"],
+            default: "open",
+          },
+        },
+      },
+      UpdateProjectRequest: {
+        type: "object",
+        minProperties: 1,
+        properties: {
+          title: { type: "string", minLength: 3, maxLength: 200 },
+          description: { type: "string", maxLength: 5000 },
+          category: { type: "string", maxLength: 100 },
+          location: { $ref: "#/components/schemas/Location" },
+          budget: { type: "number", minimum: 0 },
+        },
+      },
+      PatchProjectStatusRequest: {
+        type: "object",
+        required: ["status"],
+        properties: {
+          status: {
+            type: "string",
+            enum: ["open", "closed", "in-progress"],
+            example: "in-progress",
+          },
+        },
+      },
+      Proposal: {
+        type: "object",
+        properties: {
+          _id: { type: "string", example: "674a1b2c3d4e5f6789012346" },
+          project: { $ref: "#/components/schemas/Project" },
+          worker: { $ref: "#/components/schemas/UserPublic" },
+          message: { type: "string", example: "أقدر أخلصها في يومين" },
+          price: { type: "number", example: 450 },
+          estimatedDuration: { type: "string", example: "2 days" },
+          status: {
+            type: "string",
+            enum: ["pending", "accepted", "rejected", "withdrawn"],
+            example: "pending",
+          },
+          createdAt: { type: "string", format: "date-time" },
+          updatedAt: { type: "string", format: "date-time" },
+        },
+      },
+      CreateProposalRequest: {
+        type: "object",
+        required: ["price"],
+        properties: {
+          message: { type: "string", maxLength: 3000, example: "أقدر أخلصها في يومين" },
+          price: { type: "number", minimum: 0, example: 450 },
+          estimatedDuration: { type: "string", maxLength: 200, example: "2 days" },
+        },
+      },
+      UpdateProposalRequest: {
+        type: "object",
+        minProperties: 1,
+        properties: {
+          message: { type: "string", maxLength: 3000 },
+          price: { type: "number", minimum: 0 },
+          estimatedDuration: { type: "string", maxLength: 200 },
+        },
+      },
+      PatchProposalStatusRequest: {
+        type: "object",
+        required: ["status"],
+        properties: {
+          status: {
+            type: "string",
+            enum: ["accepted", "rejected"],
+            example: "accepted",
+            description: "Accepting a proposal sets the project to `in-progress` and rejects other pending proposals.",
           },
         },
       },
@@ -947,6 +1058,537 @@ const swaggerDocument = {
           401: { $ref: "#/components/responses/Unauthorized" },
           403: { $ref: "#/components/responses/Forbidden" },
           404: { $ref: "#/components/responses/NotFound" },
+        },
+      },
+    },
+    "/projects": {
+      get: {
+        tags: ["Projects (Public)"],
+        summary: "List all projects",
+        description: "No authentication required. Filter by status, city, or category.",
+        parameters: [
+          {
+            name: "status",
+            in: "query",
+            schema: { type: "string", enum: ["open", "closed", "in-progress"] },
+            example: "open",
+          },
+          {
+            name: "city",
+            in: "query",
+            schema: { type: "string" },
+            description: "Filter by city (partial match)",
+            example: "القاهرة",
+          },
+          {
+            name: "category",
+            in: "query",
+            schema: { type: "string" },
+            example: "plumbing",
+          },
+        ],
+        responses: {
+          200: {
+            description: "List of projects",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    success: { type: "boolean", example: true },
+                    count: { type: "integer" },
+                    data: {
+                      type: "object",
+                      properties: {
+                        projects: {
+                          type: "array",
+                          items: { $ref: "#/components/schemas/Project" },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      post: {
+        tags: ["Projects (Client)"],
+        summary: "Create a new project",
+        description: "Requires `user` role (Client).",
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/CreateProjectRequest" },
+            },
+          },
+        },
+        responses: {
+          201: {
+            description: "Project created",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    success: { type: "boolean", example: true },
+                    message: { type: "string", example: "Project created" },
+                    data: {
+                      type: "object",
+                      properties: {
+                        project: { $ref: "#/components/schemas/Project" },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          401: { $ref: "#/components/responses/Unauthorized" },
+          403: { $ref: "#/components/responses/Forbidden" },
+          422: { $ref: "#/components/responses/ValidationError" },
+        },
+      },
+    },
+    "/projects/{id}": {
+      get: {
+        tags: ["Projects (Public)"],
+        summary: "Get project by ID",
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: { type: "string" },
+            description: "Project MongoDB _id",
+          },
+        ],
+        responses: {
+          200: {
+            description: "Project details",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    success: { type: "boolean", example: true },
+                    data: {
+                      type: "object",
+                      properties: {
+                        project: { $ref: "#/components/schemas/Project" },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          404: { $ref: "#/components/responses/NotFound" },
+        },
+      },
+      put: {
+        tags: ["Projects (Client)"],
+        summary: "Update project",
+        description: "Requires `user` role. Only the project owner can update.",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: { type: "string" },
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/UpdateProjectRequest" },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: "Project updated",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    success: { type: "boolean", example: true },
+                    message: { type: "string", example: "Project updated" },
+                    data: {
+                      type: "object",
+                      properties: {
+                        project: { $ref: "#/components/schemas/Project" },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          401: { $ref: "#/components/responses/Unauthorized" },
+          403: { $ref: "#/components/responses/Forbidden" },
+          404: { $ref: "#/components/responses/NotFound" },
+          422: { $ref: "#/components/responses/ValidationError" },
+        },
+      },
+      delete: {
+        tags: ["Projects (Client)"],
+        summary: "Delete project",
+        description: "Requires `user` role. Only the project owner can delete. Also deletes all related proposals.",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: { type: "string" },
+          },
+        ],
+        responses: {
+          200: {
+            description: "Project deleted",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    success: { type: "boolean", example: true },
+                    message: { type: "string", example: "Project deleted" },
+                  },
+                },
+              },
+            },
+          },
+          401: { $ref: "#/components/responses/Unauthorized" },
+          403: { $ref: "#/components/responses/Forbidden" },
+          404: { $ref: "#/components/responses/NotFound" },
+        },
+      },
+    },
+    "/projects/{id}/status": {
+      patch: {
+        tags: ["Projects (Client)"],
+        summary: "Change project status",
+        description: "Requires `user` role. Only the project owner can change status.",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: { type: "string" },
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/PatchProjectStatusRequest" },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: "Status updated",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    success: { type: "boolean", example: true },
+                    message: { type: "string", example: "Project status updated" },
+                    data: {
+                      type: "object",
+                      properties: {
+                        project: { $ref: "#/components/schemas/Project" },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          401: { $ref: "#/components/responses/Unauthorized" },
+          403: { $ref: "#/components/responses/Forbidden" },
+          404: { $ref: "#/components/responses/NotFound" },
+          422: { $ref: "#/components/responses/ValidationError" },
+        },
+      },
+    },
+    "/projects/{id}/proposals": {
+      get: {
+        tags: ["Proposals (Client)"],
+        summary: "List proposals on a project",
+        description: "Requires `user` role. Only the project owner can view proposals.",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: { type: "string" },
+            description: "Project MongoDB _id",
+          },
+        ],
+        responses: {
+          200: {
+            description: "List of proposals",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    success: { type: "boolean", example: true },
+                    count: { type: "integer" },
+                    data: {
+                      type: "object",
+                      properties: {
+                        proposals: {
+                          type: "array",
+                          items: { $ref: "#/components/schemas/Proposal" },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          401: { $ref: "#/components/responses/Unauthorized" },
+          403: { $ref: "#/components/responses/Forbidden" },
+          404: { $ref: "#/components/responses/NotFound" },
+        },
+      },
+      post: {
+        tags: ["Proposals (Worker)"],
+        summary: "Submit a proposal on a project",
+        description: "Requires `worker` role. Project must be `open`. One proposal per worker per project.",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: { type: "string" },
+            description: "Project MongoDB _id",
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/CreateProposalRequest" },
+            },
+          },
+        },
+        responses: {
+          201: {
+            description: "Proposal submitted",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    success: { type: "boolean", example: true },
+                    message: { type: "string", example: "Proposal submitted" },
+                    data: {
+                      type: "object",
+                      properties: {
+                        proposal: { $ref: "#/components/schemas/Proposal" },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          400: { description: "Project is not open for proposals" },
+          401: { $ref: "#/components/responses/Unauthorized" },
+          403: { $ref: "#/components/responses/Forbidden" },
+          404: { $ref: "#/components/responses/NotFound" },
+          409: { description: "Already submitted a proposal for this project" },
+          422: { $ref: "#/components/responses/ValidationError" },
+        },
+      },
+    },
+    "/proposals/my": {
+      get: {
+        tags: ["Proposals (Worker)"],
+        summary: "Get my proposals",
+        description: "Requires `worker` role. Returns all proposals submitted by the authenticated worker.",
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: {
+            description: "List of my proposals",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    success: { type: "boolean", example: true },
+                    count: { type: "integer" },
+                    data: {
+                      type: "object",
+                      properties: {
+                        proposals: {
+                          type: "array",
+                          items: { $ref: "#/components/schemas/Proposal" },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          401: { $ref: "#/components/responses/Unauthorized" },
+          403: { $ref: "#/components/responses/Forbidden" },
+        },
+      },
+    },
+    "/proposals/{id}": {
+      put: {
+        tags: ["Proposals (Worker)"],
+        summary: "Update my proposal",
+        description: "Requires `worker` role. Only pending proposals can be updated.",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: { type: "string" },
+            description: "Proposal MongoDB _id",
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/UpdateProposalRequest" },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: "Proposal updated",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    success: { type: "boolean", example: true },
+                    message: { type: "string", example: "Proposal updated" },
+                    data: {
+                      type: "object",
+                      properties: {
+                        proposal: { $ref: "#/components/schemas/Proposal" },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          400: { description: "Only pending proposals can be updated" },
+          401: { $ref: "#/components/responses/Unauthorized" },
+          403: { $ref: "#/components/responses/Forbidden" },
+          404: { $ref: "#/components/responses/NotFound" },
+          422: { $ref: "#/components/responses/ValidationError" },
+        },
+      },
+      delete: {
+        tags: ["Proposals (Worker)"],
+        summary: "Withdraw my proposal",
+        description: "Requires `worker` role. Only pending proposals can be withdrawn.",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: { type: "string" },
+          },
+        ],
+        responses: {
+          200: {
+            description: "Proposal withdrawn",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    success: { type: "boolean", example: true },
+                    message: { type: "string", example: "Proposal withdrawn" },
+                  },
+                },
+              },
+            },
+          },
+          400: { description: "Only pending proposals can be withdrawn" },
+          401: { $ref: "#/components/responses/Unauthorized" },
+          403: { $ref: "#/components/responses/Forbidden" },
+          404: { $ref: "#/components/responses/NotFound" },
+        },
+      },
+    },
+    "/proposals/{id}/status": {
+      patch: {
+        tags: ["Proposals (Client)"],
+        summary: "Accept or reject a proposal",
+        description:
+          "Requires `user` role. Only the project owner can accept/reject. " +
+          "Accepting sets the project to `in-progress` and rejects other pending proposals.",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: { type: "string" },
+            description: "Proposal MongoDB _id",
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/PatchProposalStatusRequest" },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: "Proposal status updated",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    success: { type: "boolean", example: true },
+                    message: { type: "string", example: "Proposal accepted" },
+                    data: {
+                      type: "object",
+                      properties: {
+                        proposal: { $ref: "#/components/schemas/Proposal" },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          400: { description: "Only pending proposals can be accepted or rejected" },
+          401: { $ref: "#/components/responses/Unauthorized" },
+          403: { $ref: "#/components/responses/Forbidden" },
+          404: { $ref: "#/components/responses/NotFound" },
+          422: { $ref: "#/components/responses/ValidationError" },
         },
       },
     },
