@@ -53,7 +53,8 @@ const swaggerDocument = {
       "**Auth:** Register/login, refresh token, profile (`/me`).\n\n" +
       "**Profiles:** Public listing by ID; worker/company manage their profile via `/worker/me` and `/company/me` (multipart for images).\n\n" +
       "**Projects:** Clients (`user` role) post and manage projects. Public listing and details.\n\n" +
-      "**Proposals:** Workers submit proposals on open projects. Clients accept/reject proposals.",
+      "**Proposals:** Workers submit proposals on open projects. Clients accept/reject proposals.\n\n" +
+      "**Chat:** Clients start conversations with workers; both can list conversations, send/receive messages (text, image, or file), and mark messages as read.",
     contact: {
       name: "Maallem Team",
     },
@@ -68,6 +69,8 @@ const swaggerDocument = {
     { name: "Projects (Client)", description: "Client (`user` role) + Bearer token" },
     { name: "Proposals (Worker)", description: "Worker role + Bearer token" },
     { name: "Proposals (Client)", description: "Client (`user` role) + Bearer token" },
+    { name: "Chat (Client)", description: "Client (`user` role) + Bearer token" },
+    { name: "Chat", description: "Client (`user`) or worker + Bearer token" },
   ],
   components: {
     securitySchemes: {
@@ -382,6 +385,81 @@ const swaggerDocument = {
             enum: ["accepted", "rejected"],
             example: "accepted",
             description: "Accepting a proposal sets the project to `in-progress` and rejects other pending proposals.",
+          },
+        },
+      },
+      Conversation: {
+        type: "object",
+        properties: {
+          _id: { type: "string", example: "674a1b2c3d4e5f6789012347" },
+          client: { $ref: "#/components/schemas/UserPublic" },
+          worker: { $ref: "#/components/schemas/UserPublic" },
+          project: {
+            type: "string",
+            nullable: true,
+            description: "Optional linked project MongoDB _id",
+            example: "674a1b2c3d4e5f6789012345",
+          },
+          lastMessage: { $ref: "#/components/schemas/Message" },
+          lastMessageAt: { type: "string", format: "date-time" },
+          unreadCount: {
+            type: "object",
+            properties: {
+              client: { type: "integer", example: 0 },
+              worker: { type: "integer", example: 2 },
+            },
+          },
+          createdAt: { type: "string", format: "date-time" },
+          updatedAt: { type: "string", format: "date-time" },
+        },
+      },
+      Message: {
+        type: "object",
+        properties: {
+          _id: { type: "string", example: "674a1b2c3d4e5f6789012348" },
+          conversation: { type: "string", example: "674a1b2c3d4e5f6789012347" },
+          sender: { $ref: "#/components/schemas/UserPublic" },
+          senderRole: { type: "string", enum: ["user", "worker"], example: "user" },
+          type: { type: "string", enum: ["text", "image", "file"], example: "text" },
+          content: { type: "string", nullable: true, example: "مرحباً، هل أنت متاح؟" },
+          fileUrl: { type: "string", format: "uri", nullable: true },
+          fileName: { type: "string", nullable: true, example: "plan.pdf" },
+          isRead: { type: "boolean", example: false },
+          createdAt: { type: "string", format: "date-time" },
+          updatedAt: { type: "string", format: "date-time" },
+        },
+      },
+      StartConversationRequest: {
+        type: "object",
+        required: ["workerId"],
+        properties: {
+          workerId: {
+            type: "string",
+            description: "Worker user MongoDB _id",
+            example: "674a1b2c3d4e5f6789012346",
+          },
+          projectId: {
+            type: "string",
+            description: "Optional project to link to the conversation",
+            example: "674a1b2c3d4e5f6789012345",
+          },
+        },
+      },
+      SendMessageBody: {
+        type: "object",
+        description:
+          "Send as **multipart/form-data**. For text messages provide `content`. " +
+          "For image/file messages upload `file` (images set type `image`, other files set type `file`).",
+        properties: {
+          content: {
+            type: "string",
+            description: "Required for text messages",
+            example: "مرحباً",
+          },
+          file: {
+            type: "string",
+            format: "binary",
+            description: "Image or document attachment",
           },
         },
       },
@@ -1589,6 +1667,238 @@ const swaggerDocument = {
           403: { $ref: "#/components/responses/Forbidden" },
           404: { $ref: "#/components/responses/NotFound" },
           422: { $ref: "#/components/responses/ValidationError" },
+        },
+      },
+    },
+    "/chat/conversations": {
+      post: {
+        tags: ["Chat (Client)"],
+        summary: "Start or get a conversation",
+        description:
+          "Requires `user` role. Returns an existing conversation with the worker or creates a new one. " +
+          "One conversation per client–worker pair.",
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/StartConversationRequest" },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: "Conversation ready",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    success: { type: "boolean", example: true },
+                    message: { type: "string", example: "Conversation ready" },
+                    data: {
+                      type: "object",
+                      properties: {
+                        conversation: { $ref: "#/components/schemas/Conversation" },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          400: { description: "workerId is required" },
+          401: { $ref: "#/components/responses/Unauthorized" },
+          403: { $ref: "#/components/responses/Forbidden" },
+        },
+      },
+      get: {
+        tags: ["Chat"],
+        summary: "Get my conversations",
+        description:
+          "Requires `user` or `worker` role. Returns conversations sorted by most recent message.",
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: {
+            description: "List of conversations",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    success: { type: "boolean", example: true },
+                    message: { type: "string", example: "Conversations fetched" },
+                    data: {
+                      type: "object",
+                      properties: {
+                        conversations: {
+                          type: "array",
+                          items: { $ref: "#/components/schemas/Conversation" },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          401: { $ref: "#/components/responses/Unauthorized" },
+          403: { $ref: "#/components/responses/Forbidden" },
+        },
+      },
+    },
+    "/chat/conversations/{id}/messages": {
+      get: {
+        tags: ["Chat"],
+        summary: "Get messages in a conversation",
+        description:
+          "Requires `user` or `worker` role. Only participants can access. Messages are returned oldest first.",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: { type: "string" },
+            description: "Conversation MongoDB _id",
+          },
+          {
+            name: "page",
+            in: "query",
+            schema: { type: "integer", minimum: 1, default: 1 },
+          },
+          {
+            name: "limit",
+            in: "query",
+            schema: { type: "integer", minimum: 1, default: 30 },
+          },
+        ],
+        responses: {
+          200: {
+            description: "Paginated messages",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    success: { type: "boolean", example: true },
+                    message: { type: "string", example: "Messages fetched" },
+                    data: {
+                      type: "object",
+                      properties: {
+                        messages: {
+                          type: "array",
+                          items: { $ref: "#/components/schemas/Message" },
+                        },
+                        pagination: {
+                          type: "object",
+                          properties: {
+                            page: { type: "integer", example: 1 },
+                            limit: { type: "integer", example: 30 },
+                            total: { type: "integer", example: 45 },
+                            pages: { type: "integer", example: 2 },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          401: { $ref: "#/components/responses/Unauthorized" },
+          403: { description: "Not a participant in this conversation" },
+          404: { $ref: "#/components/responses/NotFound" },
+        },
+      },
+      post: {
+        tags: ["Chat"],
+        summary: "Send a message",
+        description:
+          "Requires `user` or `worker` role. Text: send `content` in multipart or JSON body. " +
+          "Image/file: upload `file` field (multipart). Triggers a real-time event via Pusher.",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: { type: "string" },
+            description: "Conversation MongoDB _id",
+          },
+        ],
+        requestBody: {
+          content: {
+            "multipart/form-data": {
+              schema: { $ref: "#/components/schemas/SendMessageBody" },
+            },
+          },
+        },
+        responses: {
+          201: {
+            description: "Message sent",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    success: { type: "boolean", example: true },
+                    message: { type: "string", example: "Message sent" },
+                    data: {
+                      type: "object",
+                      properties: {
+                        message: { $ref: "#/components/schemas/Message" },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          400: { description: "Message content is required (for text messages)" },
+          401: { $ref: "#/components/responses/Unauthorized" },
+          403: { description: "Not a participant in this conversation" },
+          404: { $ref: "#/components/responses/NotFound" },
+          500: { description: "File upload failed" },
+        },
+      },
+    },
+    "/chat/conversations/{id}/read": {
+      patch: {
+        tags: ["Chat"],
+        summary: "Mark messages as read",
+        description:
+          "Requires `user` or `worker` role. Marks unread messages from the other participant as read " +
+          "and resets your unread count. Notifies the other participant via Pusher.",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: { type: "string" },
+            description: "Conversation MongoDB _id",
+          },
+        ],
+        responses: {
+          200: {
+            description: "Messages marked as read",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    success: { type: "boolean", example: true },
+                    message: { type: "string", example: "Messages marked as read" },
+                    data: { type: "object", nullable: true, example: null },
+                  },
+                },
+              },
+            },
+          },
+          401: { $ref: "#/components/responses/Unauthorized" },
+          403: { description: "Not a participant in this conversation" },
+          404: { $ref: "#/components/responses/NotFound" },
         },
       },
     },
