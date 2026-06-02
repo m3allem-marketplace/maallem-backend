@@ -1,5 +1,8 @@
 const authService = require("./auth.service");
 const catchAsync = require("../../utils/catchAsync");
+const AppError = require("../../utils/AppError");
+const { sendResponse } = require("../../utils/apiResponse");
+
 const {
   registerSchema,
   loginSchema,
@@ -12,9 +15,8 @@ const validate = (schema, data) => {
   const { error, value } = schema.validate(data, { abortEarly: false });
   if (error) {
     const messages = error.details.map((d) => d.message);
-    const err = new Error(messages.join(", "));
-    err.statusCode = 422;
-    throw err;
+    //using AppError to handle the errors
+    throw new AppError(messages.join(", "), 422);
   }
   return value;
 };
@@ -25,22 +27,24 @@ const register = catchAsync(async (req, res) => {
   const data = validate(registerSchema, req.body);
   const { user, accessToken, refreshToken } = await authService.register(data);
 
-  res.status(201).json({
-    success: true,
-    message: "Registered successfully",
-    data: { user, accessToken, refreshToken },
-  });
+  sendResponse(
+    res,
+    201,
+    { user, accessToken, refreshToken },
+    "Registered successfully",
+  );
 });
 
 const login = catchAsync(async (req, res) => {
   const data = validate(loginSchema, req.body);
   const { user, accessToken, refreshToken } = await authService.login(data);
 
-  res.status(200).json({
-    success: true,
-    message: "Logged in successfully",
-    data: { user, accessToken, refreshToken },
-  });
+  sendResponse(
+    res,
+    200,
+    { user, accessToken, refreshToken },
+    "Logged in successfully",
+  );
 });
 
 const refreshToken = catchAsync(async (req, res) => {
@@ -48,39 +52,28 @@ const refreshToken = catchAsync(async (req, res) => {
   const { accessToken, user } =
     await authService.refreshAccessToken(refreshToken);
 
-  res.status(200).json({
-    success: true,
-    message: "Token refreshed",
-    data: { accessToken, user },
-  });
+ sendResponse(res, 200, { accessToken, user }, "Token refreshed");
+
 });
 
 const logout = catchAsync(async (req, res) => {
   const { refreshToken } = req.body;
   await authService.logout(req.user.id, refreshToken);
 
-  res.status(200).json({
-    success: true,
-    message: "Logged out successfully",
-  });
+  sendResponse(res, 200, null, "Logged out successfully");
+
 });
 
 const logoutAll = catchAsync(async (req, res) => {
   await authService.logoutAll(req.user.id);
 
-  res.status(200).json({
-    success: true,
-    message: "Logged out from all devices",
-  });
+  sendResponse(res, 200, null, "Logged out from all devices")
 });
 
 const getMe = catchAsync(async (req, res) => {
   const user = await authService.getMe(req.user.id);
 
-  res.status(200).json({
-    success: true,
-    data: { user },
-  });
+  sendResponse(res, 200, { user });
 });
 
 module.exports = { register, login, refreshToken, logout, logoutAll, getMe };
