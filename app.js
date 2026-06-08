@@ -8,6 +8,7 @@ const profilesRoutes = require("./src/modules/profiles/profiles.routes");
 const projectsRoutes = require("./src/modules/projects/projects.routes");
 const proposalsRoutes = require("./src/modules/proposals/proposals.routes");
 const chatRoutes = require("./src/modules/chat/chat.routes");
+const usersRoutes = require("./src/modules/users/users.routes");
 const { buildSwaggerSpec } = require("./src/docs/swagger");
 const { getSwaggerHtml } = require("./src/docs/swaggerPage");
 
@@ -54,7 +55,9 @@ app.use("/api/v1/profiles", profilesRoutes);
 app.use("/api/v1/projects", projectsRoutes);
 app.use("/api/v1/proposals", proposalsRoutes);
 app.use("/api/v1/chat", chatRoutes);
+app.use("/api/v1/users", usersRoutes);
 app.use("/api/chat", chatRoutes);
+app.use("/api/users", usersRoutes);
 
 // Aliases بدون v1 (لو حد نسيها)
 app.use("/api/auth", authLimiter, authRoutes);
@@ -76,6 +79,7 @@ app.get("/api/v1", (req, res) => {
       profiles: "/api/v1/profiles",
       projects: "/api/v1/projects",
       proposals: "/api/v1/proposals",
+      users: "/api/v1/users",
       health: "/health",
     },
   });

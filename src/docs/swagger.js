@@ -54,7 +54,8 @@ const swaggerDocument = {
       "**Profiles:** Public listing by ID; worker/company manage their profile via `/worker/me` and `/company/me` (multipart for images).\n\n" +
       "**Projects:** Clients (`user` role) post and manage projects. Public listing and details.\n\n" +
       "**Proposals:** Workers submit proposals on open projects. Clients accept/reject proposals.\n\n" +
-      "**Chat:** Clients start conversations with workers; both can list conversations, send/receive messages (text, image, or file), and mark messages as read.",
+      "**Chat:** Clients start conversations with workers; both can list conversations, send/receive messages (text, image, or file), and mark messages as read.\n\n" +
+      "**Users (Client Dashboard):** Single private endpoint aggregating the client's projects, pending proposals, conversations, and summary stats.",
     contact: {
       name: "Maallem Team",
     },
@@ -71,6 +72,7 @@ const swaggerDocument = {
     { name: "Proposals (Client)", description: "Client (`user` role) + Bearer token" },
     { name: "Chat (Client)", description: "Client (`user` role) + Bearer token" },
     { name: "Chat", description: "Client (`user`) or worker + Bearer token" },
+    { name: "Users (Client)", description: "Client (`user` role) private dashboard + Bearer token" },
   ],
   components: {
     securitySchemes: {
@@ -442,6 +444,101 @@ const swaggerDocument = {
             type: "string",
             description: "Optional project to link to the conversation",
             example: "674a1b2c3d4e5f6789012345",
+          },
+        },
+      },
+      ClientDashboardSummary: {
+        type: "object",
+        properties: {
+          projects: {
+            type: "object",
+            properties: {
+              total: { type: "integer", example: 5 },
+              open: { type: "integer", example: 2 },
+              inProgress: { type: "integer", example: 1 },
+              closed: { type: "integer", example: 2 },
+            },
+          },
+          pendingProposals: {
+            type: "integer",
+            example: 3,
+            description: "Proposals awaiting client accept/reject",
+          },
+          unreadMessages: { type: "integer", example: 2 },
+        },
+      },
+      ClientProjectWithProposals: {
+        allOf: [
+          { $ref: "#/components/schemas/Project" },
+          {
+            type: "object",
+            properties: {
+              proposals: {
+                type: "object",
+                properties: {
+                  pending: {
+                    type: "array",
+                    items: { $ref: "#/components/schemas/Proposal" },
+                  },
+                  accepted: {
+                    oneOf: [
+                      { $ref: "#/components/schemas/Proposal" },
+                      { type: "null" },
+                    ],
+                  },
+                  counts: {
+                    type: "object",
+                    properties: {
+                      pending: { type: "integer" },
+                      accepted: { type: "integer" },
+                      rejected: { type: "integer" },
+                      withdrawn: { type: "integer" },
+                      total: { type: "integer" },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        ],
+      },
+      PendingProposalWithProject: {
+        allOf: [
+          { $ref: "#/components/schemas/Proposal" },
+          {
+            type: "object",
+            properties: {
+              project: {
+                type: "object",
+                nullable: true,
+                properties: {
+                  _id: { type: "string" },
+                  title: { type: "string" },
+                  status: { type: "string", enum: ["open", "closed", "in-progress"] },
+                  category: { type: "string" },
+                },
+              },
+            },
+          },
+        ],
+      },
+      ClientDashboard: {
+        type: "object",
+        properties: {
+          user: { $ref: "#/components/schemas/User" },
+          summary: { $ref: "#/components/schemas/ClientDashboardSummary" },
+          projects: {
+            type: "array",
+            items: { $ref: "#/components/schemas/ClientProjectWithProposals" },
+          },
+          pendingProposals: {
+            type: "array",
+            items: { $ref: "#/components/schemas/PendingProposalWithProject" },
+            description: "Flat list of pending proposals across all projects (action items)",
+          },
+          conversations: {
+            type: "array",
+            items: { $ref: "#/components/schemas/Conversation" },
           },
         },
       },
@@ -1667,6 +1764,37 @@ const swaggerDocument = {
           403: { $ref: "#/components/responses/Forbidden" },
           404: { $ref: "#/components/responses/NotFound" },
           422: { $ref: "#/components/responses/ValidationError" },
+        },
+      },
+    },
+    "/users/me/dashboard": {
+      get: {
+        tags: ["Users (Client)"],
+        summary: "Get client dashboard",
+        description:
+          "Requires `user` role. **Private** — returns all data for the authenticated client in one response: " +
+          "profile, project stats, projects with nested proposals (pending + accepted), " +
+          "a flat list of pending proposals needing action, and chat conversations with unread counts.",
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: {
+            description: "Client dashboard",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    success: { type: "boolean", example: true },
+                    message: { type: "string", example: "Dashboard fetched" },
+                    data: { $ref: "#/components/schemas/ClientDashboard" },
+                  },
+                },
+              },
+            },
+          },
+          401: { $ref: "#/components/responses/Unauthorized" },
+          403: { $ref: "#/components/responses/Forbidden" },
+          404: { $ref: "#/components/responses/NotFound" },
         },
       },
     },
