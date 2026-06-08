@@ -3,6 +3,8 @@ const pusher = require("../../config/pusher");
 const cloudinary = require("../../config/cloudinary");
 const AppError = require("../../utils/AppError");
 const { CHAT_EVENTS, CHAT_CHANNELS } = require("../../constants/events");
+const notificationsService = require("../notifications/notifications.service");
+
 
 // ─── Start or get existing conversation ──────────────────────────────────────
 const getOrCreateConversation = async (clientId, workerId, projectId = null) => {
@@ -212,3 +214,14 @@ module.exports = {
   sendMessage,
   markAsRead,
 };
+// ─── Notify recipient of new message ─────────────────────────────────────────
+const recipientId =
+  conversation.client.toString() === senderId
+    ? conversation.worker
+    : conversation.client;
+
+await notificationsService.notifyNewMessage(
+  recipientId,
+  senderName,       // get from req.user or populate sender
+  conversationId,
+);

@@ -1,5 +1,6 @@
 const Proposal = require("./proposals.model");
 const Project = require("../projects/projects.model");
+const AppError = require("../../utils/AppError");
 const {
   PROJECT_STATUS,
   PROPOSAL_STATUS,
@@ -8,8 +9,15 @@ const {
   findProjectOrFail,
   assertOwner,
 } = require("../projects/projects.service");
+const {
+  notifyNewProposal,
+  notifyProposalAccepted,
+  notifyProposalRejected,
+} = require("../notifications/notifications.service");
 
 const USER_PUBLIC_FIELDS = "name email role phone";
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const findProposalOrFail = async (id) => {
   const proposal = await Proposal.findById(id)
@@ -18,62 +26,69 @@ const findProposalOrFail = async (id) => {
       path: "project",
       populate: { path: "client", select: USER_PUBLIC_FIELDS },
     });
-  if (!proposal) {
-    const error = new Error("Proposal not found");
-    error.statusCode = 404;
-    throw error;
-  }
+
+  if (!proposal) throw new AppError("Proposal not found", 404);
   return proposal;
 };
 
 const assertWorker = (proposal, userId) => {
-  const workerId = proposal.worker._id?.toString() || proposal.worker.toString();
+  // safe whether worker is populated object or raw ObjectId
+  const workerId = proposal.worker._id?.toString() ?? proposal.worker.toString();
   if (workerId !== userId) {
-    const error = new Error("You can only manage your own proposals");
-    error.statusCode = 403;
-    throw error;
+    throw new AppError("You can only manage your own proposals", 403);
   }
 };
+
+// ─── Create ───────────────────────────────────────────────────────────────────
 
 const createProposal = async (workerId, projectId, data) => {
   const project = await findProjectOrFail(projectId);
 
   if (project.status !== PROJECT_STATUS.OPEN) {
-    const error = new Error("Proposals can only be submitted on open projects");
-    error.statusCode = 400;
-    throw error;
+    throw new AppError("Proposals can only be submitted on open projects", 400);
   }
 
   const existing = await Proposal.findOne({ project: projectId, worker: workerId });
   if (existing) {
-    const error = new Error("You already submitted a proposal for this project");
-    error.statusCode = 409;
-    throw error;
+    throw new AppError("You already submitted a proposal for this project", 409);
   }
 
+  let proposal;
   try {
-    const proposal = await Proposal.create({
+    proposal = await Proposal.create({
       project: projectId,
       worker: workerId,
       message: data.message || "",
       price: data.price,
       estimatedDuration: data.estimatedDuration || "",
     });
-    await proposal.populate("worker", USER_PUBLIC_FIELDS);
-    await proposal.populate({
-      path: "project",
-      populate: { path: "client", select: USER_PUBLIC_FIELDS },
-    });
-    return proposal;
   } catch (err) {
+    // double safety for race condition on unique index
     if (err.code === 11000) {
-      const error = new Error("You already submitted a proposal for this project");
-      error.statusCode = 409;
-      throw error;
+      throw new AppError("You already submitted a proposal for this project", 409);
     }
     throw err;
   }
+
+  await proposal.populate("worker", USER_PUBLIC_FIELDS);
+  await proposal.populate({
+    path: "project",
+    populate: { path: "client", select: USER_PUBLIC_FIELDS },
+  });
+
+  // notify client about new proposal — non-blocking
+  notifyNewProposal(
+    proposal.project.client._id,
+    proposal.worker.name,
+    proposal.project.title,
+    projectId,
+    proposal._id,
+  ).catch((err) => console.error("Notification error:", err.message));
+
+  return proposal;
 };
+
+// ─── List ─────────────────────────────────────────────────────────────────────
 
 const listProposalsByProject = async (clientId, projectId) => {
   const project = await findProjectOrFail(projectId);
@@ -93,14 +108,14 @@ const listMyProposals = async (workerId) => {
     .sort({ createdAt: -1 });
 };
 
+// ─── Update ───────────────────────────────────────────────────────────────────
+
 const updateProposal = async (workerId, id, data) => {
   const proposal = await findProposalOrFail(id);
   assertWorker(proposal, workerId);
 
   if (proposal.status !== PROPOSAL_STATUS.PENDING) {
-    const error = new Error("Only pending proposals can be updated");
-    error.statusCode = 400;
-    throw error;
+    throw new AppError("Only pending proposals can be updated", 400);
   }
 
   if (data.message !== undefined) proposal.message = data.message;
@@ -113,23 +128,24 @@ const updateProposal = async (workerId, id, data) => {
   return proposal;
 };
 
+// ─── Delete (withdraw) ────────────────────────────────────────────────────────
+
 const deleteProposal = async (workerId, id) => {
-  const proposal = await Proposal.findById(id);
-  if (!proposal) {
-    const error = new Error("Proposal not found");
-    error.statusCode = 404;
-    throw error;
-  }
+  // populate worker so assertWorker can safely compare IDs
+  const proposal = await Proposal.findById(id).populate("worker", "_id");
+
+  if (!proposal) throw new AppError("Proposal not found", 404);
+
   assertWorker(proposal, workerId);
 
   if (proposal.status !== PROPOSAL_STATUS.PENDING) {
-    const error = new Error("Only pending proposals can be withdrawn");
-    error.statusCode = 400;
-    throw error;
+    throw new AppError("Only pending proposals can be withdrawn", 400);
   }
 
   await Proposal.findByIdAndDelete(id);
 };
+
+// ─── Update status (accept / reject) ─────────────────────────────────────────
 
 const updateProposalStatus = async (clientId, id, status) => {
   const proposal = await findProposalOrFail(id);
@@ -138,18 +154,19 @@ const updateProposalStatus = async (clientId, id, status) => {
   assertOwner(project, clientId);
 
   if (proposal.status !== PROPOSAL_STATUS.PENDING) {
-    const error = new Error("Only pending proposals can be accepted or rejected");
-    error.statusCode = 400;
-    throw error;
+    throw new AppError("Only pending proposals can be accepted or rejected", 400);
   }
 
   proposal.status = status;
   await proposal.save();
 
   if (status === PROPOSAL_STATUS.ACCEPTED) {
+    // set project to in-progress
     await Project.findByIdAndUpdate(project._id, {
       status: PROJECT_STATUS.IN_PROGRESS,
     });
+
+    // reject all other pending proposals
     await Proposal.updateMany(
       {
         project: project._id,
@@ -158,6 +175,23 @@ const updateProposalStatus = async (clientId, id, status) => {
       },
       { status: PROPOSAL_STATUS.REJECTED },
     );
+
+    // notify worker — non-blocking
+    notifyProposalAccepted(
+      proposal.worker._id,
+      project.title,
+      project._id,
+      proposal._id,
+    ).catch((err) => console.error("Notification error:", err.message));
+
+  } else if (status === PROPOSAL_STATUS.REJECTED) {
+    // notify worker — non-blocking
+    notifyProposalRejected(
+      proposal.worker._id,
+      project.title,
+      project._id,
+      proposal._id,
+    ).catch((err) => console.error("Notification error:", err.message));
   }
 
   return proposal;

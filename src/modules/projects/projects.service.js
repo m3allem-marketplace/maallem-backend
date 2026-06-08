@@ -10,18 +10,14 @@ const findProjectOrFail = async (id) => {
     USER_PUBLIC_FIELDS,
   );
   if (!project) {
-    const error = new Error("Project not found");
-    error.statusCode = 404;
-    throw error;
+    throw new AppError("Project not found", 404);
   }
   return project;
 };
 
 const assertOwner = (project, userId) => {
   if (project.client._id?.toString() !== userId && project.client.toString() !== userId) {
-    const error = new Error("You can only manage your own projects");
-    error.statusCode = 403;
-    throw error;
+    throw new AppError("You can only manage your own projects", 403);
   }
 };
 
@@ -69,9 +65,7 @@ const updateProject = async (userId, id, data) => {
 const deleteProject = async (userId, id) => {
   const project = await Project.findById(id);
   if (!project) {
-    const error = new Error("Project not found");
-    error.statusCode = 404;
-    throw error;
+    throw new AppError("Project not found", 404);
   }
   assertOwner(project, userId);
   await Proposal.deleteMany({ project: id });

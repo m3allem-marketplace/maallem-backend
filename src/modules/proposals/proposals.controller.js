@@ -9,9 +9,8 @@ const {
 const validate = (schema, data) => {
   const { error, value } = schema.validate(data, { abortEarly: false });
   if (error) {
-    const err = new Error(error.details.map((d) => d.message).join(", "));
-    err.statusCode = 422;
-    throw err;
+    throw new AppError(error.details.map((d) => d.message).join(", "), 422);
+
   }
   return value;
 };
@@ -23,11 +22,7 @@ const create = catchAsync(async (req, res) => {
     req.params.id,
     data,
   );
-  res.status(201).json({
-    success: true,
-    message: "Proposal submitted",
-    data: { proposal },
-  });
+  sendResponse(res, 201, { proposal }, "Proposal submitted");
 });
 
 const listByProject = catchAsync(async (req, res) => {
@@ -35,20 +30,12 @@ const listByProject = catchAsync(async (req, res) => {
     req.user.id,
     req.params.id,
   );
-  res.status(200).json({
-    success: true,
-    count: proposals.length,
-    data: { proposals },
-  });
+  sendResponse(res, 200, { proposals }, "Proposals fetched");
 });
 
 const listMy = catchAsync(async (req, res) => {
   const proposals = await proposalsService.listMyProposals(req.user.id);
-  res.status(200).json({
-    success: true,
-    count: proposals.length,
-    data: { proposals },
-  });
+  sendResponse(res, 200, { proposals }, "Proposals fetched");
 });
 
 const update = catchAsync(async (req, res) => {
@@ -58,16 +45,12 @@ const update = catchAsync(async (req, res) => {
     req.params.id,
     data,
   );
-  res.status(200).json({
-    success: true,
-    message: "Proposal updated",
-    data: { proposal },
-  });
+  sendResponse(res, 200, { proposal }, "Proposal updated");
 });
 
 const remove = catchAsync(async (req, res) => {
   await proposalsService.deleteProposal(req.user.id, req.params.id);
-  res.status(200).json({ success: true, message: "Proposal withdrawn" });
+  sendResponse(res, 200, null, "Proposal withdrawn");
 });
 
 const patchStatus = catchAsync(async (req, res) => {
@@ -77,11 +60,7 @@ const patchStatus = catchAsync(async (req, res) => {
     req.params.id,
     status,
   );
-  res.status(200).json({
-    success: true,
-    message: `Proposal ${status}`,
-    data: { proposal },
-  });
+  sendResponse(res, 200, { proposal }, `Proposal ${status}`);
 });
 
 module.exports = { create, listByProject, listMy, update, remove, patchStatus };
