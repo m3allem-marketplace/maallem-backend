@@ -5,6 +5,8 @@ const {
   updateProposalSchema,
   patchProposalStatusSchema,
 } = require("./proposals.validation");
+const { sendResponse } = require("../../utils/apiResponse");
+
 
 const validate = (schema, data) => {
   const { error, value } = schema.validate(data, { abortEarly: false });

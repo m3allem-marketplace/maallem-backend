@@ -1,6 +1,9 @@
 const Project = require("./projects.model");
 const Proposal = require("../proposals/proposals.model");
 const { PROJECT_STATUS } = require("../../constants/status");
+const AppError = require("../../utils/AppError"); // ✅ add this
+// ❌ remove sendResponse — it's not used in the service
+
 
 const USER_PUBLIC_FIELDS = "name email role phone";
 

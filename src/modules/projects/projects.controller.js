@@ -6,11 +6,11 @@ const {
   patchProjectStatusSchema,
   normalizeLocation,
 } = require("./projects.validation");
+const { sendResponse } = require("../../utils/apiResponse");
 
 const validate = (schema, data) => {
   const { error, value } = schema.validate(data, { abortEarly: false });
   if (error) {
-    const AppError = require("../../utils/AppError");
     throw new AppError(error.details.map((d) => d.message).join(", "), 422);
   }
   return value;
