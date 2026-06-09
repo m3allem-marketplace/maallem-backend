@@ -11,6 +11,8 @@ const chatRoutes = require("./src/modules/chat/chat.routes");
 const usersRoutes = require("./src/modules/users/users.routes");
 const { buildSwaggerSpec } = require("./src/docs/swagger");
 const { getSwaggerHtml } = require("./src/docs/swaggerPage");
+const notificationsRoutes = require("./src/modules/notifications/notifications.routes");
+
 
 const app = express();
 
@@ -97,6 +99,9 @@ app.get("/health", (req, res) => {
     baseUrl: base,
   });
 });
+
+app.use("/api/v1/notifications", notificationsRoutes);
+app.use("/api/notifications", notificationsRoutes); // alias
 
 // ─── Error Handling ───────────────────────────────────────────────────────────
 app.use(notFound);

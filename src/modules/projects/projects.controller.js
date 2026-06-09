@@ -6,40 +6,31 @@ const {
   patchProjectStatusSchema,
   normalizeLocation,
 } = require("./projects.validation");
+const { sendResponse } = require("../../utils/apiResponse");
 
 const validate = (schema, data) => {
   const { error, value } = schema.validate(data, { abortEarly: false });
   if (error) {
-    const err = new Error(error.details.map((d) => d.message).join(", "));
-    err.statusCode = 422;
-    throw err;
+    throw new AppError(error.details.map((d) => d.message).join(", "), 422);
   }
   return value;
 };
 
 const list = catchAsync(async (req, res) => {
   const projects = await projectsService.listProjects(req.query);
-  res.status(200).json({
-    success: true,
-    count: projects.length,
-    data: { projects },
-  });
+  sendResponse(res, 200, { projects, count: projects.length }, "Projects fetched");
 });
 
 const getById = catchAsync(async (req, res) => {
   const project = await projectsService.getProjectById(req.params.id);
-  res.status(200).json({ success: true, data: { project } });
+  sendResponse(res, 200, { project }, "Project fetched");
 });
 
 const create = catchAsync(async (req, res) => {
   const data = validate(createProjectSchema, req.body);
   if (data.location) data.location = normalizeLocation(data.location);
   const project = await projectsService.createProject(req.user.id, data);
-  res.status(201).json({
-    success: true,
-    message: "Project created",
-    data: { project },
-  });
+  sendResponse(res, 201, { project }, "Project created");
 });
 
 const update = catchAsync(async (req, res) => {
@@ -50,16 +41,12 @@ const update = catchAsync(async (req, res) => {
     req.params.id,
     data,
   );
-  res.status(200).json({
-    success: true,
-    message: "Project updated",
-    data: { project },
-  });
+  sendResponse(res, 200, { project }, "Project updated");
 });
 
 const remove = catchAsync(async (req, res) => {
   await projectsService.deleteProject(req.user.id, req.params.id);
-  res.status(200).json({ success: true, message: "Project deleted" });
+  sendResponse(res, 200, null, "Project deleted");
 });
 
 const patchStatus = catchAsync(async (req, res) => {
@@ -69,11 +56,7 @@ const patchStatus = catchAsync(async (req, res) => {
     req.params.id,
     status,
   );
-  res.status(200).json({
-    success: true,
-    message: "Project status updated",
-    data: { project },
-  });
+  sendResponse(res, 200, { project }, "Project status updated");
 });
 
 module.exports = { list, getById, create, update, remove, patchStatus };
