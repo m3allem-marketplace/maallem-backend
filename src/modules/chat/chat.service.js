@@ -154,6 +154,7 @@ const sendMessage = async (
   });
 
   await message.populate("sender", "name email");
+  const senderName = message.sender.name;
 
   // update conversation lastMessage + unread count
   const recipientRole =
