@@ -12,6 +12,7 @@ const usersRoutes = require("./src/modules/users/users.routes");
 const { buildSwaggerSpec } = require("./src/docs/swagger");
 const { getSwaggerHtml } = require("./src/docs/swaggerPage");
 const notificationsRoutes = require("./src/modules/notifications/notifications.routes");
+const { NODE_ENV } = require("./src/config/env");
 
 
 const app = express();
@@ -30,13 +31,13 @@ app.use(express.urlencoded({ extended: true }));
 // ─── Rate Limiting ────────────────────────────────────────────────────────────
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 دقيقة
-  max: 100,
+  max: NODE_ENV === "development" ? 10000 : 100,
   message: { success: false, message: "Too many requests, please try again later" },
 });
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 10, 
+  max: NODE_ENV === "development" ? 1000 : 20, 
   message: { success: false, message: "Too many auth attempts, please try again later" },
 });
 
