@@ -15,6 +15,8 @@ const usersRoutes = require("./src/modules/users/users.routes");
 const { buildSwaggerSpec } = require("./src/docs/swagger");
 const { getSwaggerHtml } = require("./src/docs/swaggerPage");
 const notificationsRoutes = require("./src/modules/notifications/notifications.routes");
+const { protect } = require("./src/modules/auth/auth.middleware");
+
 
 const app = express();
 
