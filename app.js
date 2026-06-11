@@ -15,6 +15,7 @@ const usersRoutes = require("./src/modules/users/users.routes");
 const { buildSwaggerSpec } = require("./src/docs/swagger");
 const { getSwaggerHtml } = require("./src/docs/swaggerPage");
 const notificationsRoutes = require("./src/modules/notifications/notifications.routes");
+const bookingsRoutes = require("./src/modules/bookings/bookings.routes");
 const { protect } = require("./src/modules/auth/auth.middleware");
 
 
@@ -139,6 +140,9 @@ app.get("/health", (req, res) => {
 
 app.use("/api/v1/notifications", notificationsRoutes);
 app.use("/api/notifications", notificationsRoutes); // alias
+
+app.use("/api/v1/bookings", bookingsRoutes);
+app.use("/api/bookings", bookingsRoutes); // alias
 
 // ─── Error Handling ───────────────────────────────────────────────────────────
 app.use(notFound);

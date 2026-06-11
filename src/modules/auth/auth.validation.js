@@ -24,7 +24,7 @@ const registerSchema = Joi.object({
     "any.only": "Passwords do not match",
     "any.required": "Please confirm your password",
   }),
-  role: Joi.string().valid("user", "worker", "company").default("user"),
+  role: Joi.string().valid("user", "worker", "company", "admin").default("user"),
 });
 
 const loginSchema = Joi.object({

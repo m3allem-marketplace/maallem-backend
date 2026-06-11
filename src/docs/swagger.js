@@ -75,6 +75,7 @@ const swaggerDocument = {
     { name: "Users (Client)", description: "Client (`user` role) private dashboard + Bearer token" },
     { name: "Notifications", description: "User notifications (read, delete, list, unread count) + Bearer token" },
     { name: "Pusher", description: "Pusher real-time channels authentication" },
+    { name: "Bookings", description: "Agreement and Escrow payment workflow between Client and Worker" },
   ],
   components: {
     securitySchemes: {
@@ -610,6 +611,53 @@ const swaggerDocument = {
         type: "object",
         properties: {
           auth: { type: "string", example: "9a5cc772ee86fc417d71:436f568a52de0..." },
+        },
+      },
+      Booking: {
+        type: "object",
+        properties: {
+          _id: { type: "string", example: "674a1b2c3d4e5f6789012350" },
+          client: { $ref: "#/components/schemas/UserPublic" },
+          provider: { $ref: "#/components/schemas/UserPublic" },
+          project: { type: "string", nullable: true, example: "674a1b2c3d4e5f6789012345" },
+          proposal: { type: "string", nullable: true, example: "674a1b2c3d4e5f6789012346" },
+          service: { type: "string", nullable: true, example: null },
+          price: { type: "number", example: 1500 },
+          escrowAmount: { type: "number", example: 0 },
+          commissionAmount: { type: "number", example: 150 },
+          status: {
+            type: "string",
+            enum: [
+              "pending_payment",
+              "paid",
+              "delivered",
+              "completed",
+              "disputed",
+              "refunded",
+              "cancelled",
+            ],
+            example: "completed",
+          },
+          createdAt: { type: "string", format: "date-time" },
+          updatedAt: { type: "string", format: "date-time" },
+        },
+      },
+      CreateBookingRequest: {
+        type: "object",
+        required: ["providerId", "price"],
+        properties: {
+          providerId: { type: "string", description: "Worker user MongoDB _id", example: "674a1b2c3d4e5f6789012346" },
+          price: { type: "number", minimum: 0, example: 1500 },
+          projectId: { type: "string", description: "Optional project ID", example: "674a1b2c3d4e5f6789012345" },
+          proposalId: { type: "string", description: "Optional proposal ID", example: "674a1b2c3d4e5f6789012346" },
+          serviceId: { type: "string", description: "Optional service ID", example: null },
+        },
+      },
+      ResolveDisputeRequest: {
+        type: "object",
+        required: ["resolution"],
+        properties: {
+          resolution: { type: "string", enum: ["refund", "release"], example: "refund" },
         },
       },
     },
@@ -2314,6 +2362,358 @@ const swaggerDocument = {
               },
             },
           },
+        },
+      },
+    },
+    "/bookings": {
+      post: {
+        tags: ["Bookings"],
+        summary: "Create a booking (Agreement)",
+        description: "Requires `user` role. Creates a new booking in `pending_payment` status.",
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/CreateBookingRequest" },
+            },
+          },
+        },
+        responses: {
+          201: {
+            description: "Booking created",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    success: { type: "boolean", example: true },
+                    message: { type: "string", example: "Booking created" },
+                    data: {
+                      type: "object",
+                      properties: {
+                        booking: { $ref: "#/components/schemas/Booking" },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          400: { description: "Invalid recipient role" },
+          401: { $ref: "#/components/responses/Unauthorized" },
+          422: { $ref: "#/components/responses/ValidationError" },
+        },
+      },
+      get: {
+        tags: ["Bookings"],
+        summary: "List my bookings",
+        description: "Returns a paginated list of bookings. For clients, returns bookings they created. For workers/companies, returns bookings assigned to them. For admins, returns all bookings.",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: "page", in: "query", schema: { type: "integer", minimum: 1, default: 1 } },
+          { name: "limit", in: "query", schema: { type: "integer", minimum: 1, default: 20 } },
+          { name: "status", in: "query", schema: { type: "string" }, description: "Filter by status" },
+          { name: "clientId", in: "query", schema: { type: "string" }, description: "Filter by client ID (Admin only)" },
+          { name: "providerId", in: "query", schema: { type: "string" }, description: "Filter by provider ID (Admin only)" },
+        ],
+        responses: {
+          200: {
+            description: "Bookings fetched",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    success: { type: "boolean", example: true },
+                    message: { type: "string", example: "Bookings fetched" },
+                    data: {
+                      type: "object",
+                      properties: {
+                        bookings: {
+                          type: "array",
+                          items: { $ref: "#/components/schemas/Booking" },
+                        },
+                        pagination: {
+                          type: "object",
+                          properties: {
+                            page: { type: "integer", example: 1 },
+                            limit: { type: "integer", example: 20 },
+                            total: { type: "integer", example: 10 },
+                            pages: { type: "integer", example: 1 },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          401: { $ref: "#/components/responses/Unauthorized" },
+        },
+      },
+    },
+    "/bookings/{id}": {
+      get: {
+        tags: ["Bookings"],
+        summary: "Get booking details by ID",
+        description: "Returns full details of a specific booking. Allowed for the client, the provider, or admin users.",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: { type: "string" },
+            description: "Booking MongoDB _id",
+          },
+        ],
+        responses: {
+          200: {
+            description: "Booking details fetched",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    success: { type: "boolean", example: true },
+                    message: { type: "string", example: "Booking fetched" },
+                    data: {
+                      type: "object",
+                      properties: {
+                        booking: { $ref: "#/components/schemas/Booking" },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          401: { $ref: "#/components/responses/Unauthorized" },
+          403: { $ref: "#/components/responses/Forbidden" },
+          404: { $ref: "#/components/responses/NotFound" },
+        },
+      },
+    },
+    "/bookings/{id}/pay": {
+      post: {
+        tags: ["Bookings"],
+        summary: "Pay for a booking (Escrow deposit)",
+        description: "Requires `user` role. Charges the client, places the funds in platform escrow, and changes status to `paid`.",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: { type: "string" },
+            description: "Booking MongoDB _id",
+          },
+        ],
+        responses: {
+          200: {
+            description: "Booking paid successfully",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    success: { type: "boolean", example: true },
+                    message: { type: "string", example: "Payment successful" },
+                    data: {
+                      type: "object",
+                      properties: {
+                        booking: { $ref: "#/components/schemas/Booking" },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          400: { description: "Invalid booking status" },
+          401: { $ref: "#/components/responses/Unauthorized" },
+          404: { $ref: "#/components/responses/NotFound" },
+        },
+      },
+    },
+    "/bookings/{id}/deliver": {
+      post: {
+        tags: ["Bookings"],
+        summary: "Deliver work (Mark as completed by provider)",
+        description: "Requires `worker` or `company` role. Changes the booking status to `delivered`.",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: { type: "string" },
+            description: "Booking MongoDB _id",
+          },
+        ],
+        responses: {
+          200: {
+            description: "Work delivered successfully",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    success: { type: "boolean", example: true },
+                    message: { type: "string", example: "Work delivered successfully" },
+                    data: {
+                      type: "object",
+                      properties: {
+                        booking: { $ref: "#/components/schemas/Booking" },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          400: { description: "Work can only be delivered after payment" },
+          401: { $ref: "#/components/responses/Unauthorized" },
+          404: { $ref: "#/components/responses/NotFound" },
+        },
+      },
+    },
+    "/bookings/{id}/approve": {
+      post: {
+        tags: ["Bookings"],
+        summary: "Approve delivery (Release escrow funds)",
+        description: "Requires `user` role. Releases the escrowed funds to the provider's balance (minus the 10% platform commission) and sets status to `completed`.",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: { type: "string" },
+            description: "Booking MongoDB _id",
+          },
+        ],
+        responses: {
+          200: {
+            description: "Delivery approved and funds released",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    success: { type: "boolean", example: true },
+                    message: { type: "string", example: "Delivery approved and funds released" },
+                    data: {
+                      type: "object",
+                      properties: {
+                        booking: { $ref: "#/components/schemas/Booking" },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          400: { description: "Booking is not in delivered status" },
+          401: { $ref: "#/components/responses/Unauthorized" },
+          404: { $ref: "#/components/responses/NotFound" },
+        },
+      },
+    },
+    "/bookings/{id}/dispute": {
+      post: {
+        tags: ["Bookings"],
+        summary: "Dispute booking delivery or progress",
+        description: "Allowed for client or provider. Sets the booking status to `disputed` for admin mediation.",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: { type: "string" },
+            description: "Booking MongoDB _id",
+          },
+        ],
+        responses: {
+          200: {
+            description: "Dispute opened successfully",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    success: { type: "boolean", example: true },
+                    message: { type: "string", example: "Dispute opened successfully" },
+                    data: {
+                      type: "object",
+                      properties: {
+                        booking: { $ref: "#/components/schemas/Booking" },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          400: { description: "Dispute can only be opened for paid or delivered bookings" },
+          401: { $ref: "#/components/responses/Unauthorized" },
+          403: { $ref: "#/components/responses/Forbidden" },
+          404: { $ref: "#/components/responses/NotFound" },
+        },
+      },
+    },
+    "/bookings/{id}/resolve-dispute": {
+      post: {
+        tags: ["Bookings"],
+        summary: "Mediate and resolve dispute",
+        description: "Requires `admin` role. Resolves the dispute. If `refund`, releases escrow to client's balance. If `release`, releases escrow (after commission) to provider's balance.",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: { type: "string" },
+            description: "Booking MongoDB _id",
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/ResolveDisputeRequest" },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: "Dispute resolved successfully",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    success: { type: "boolean", example: true },
+                    message: { type: "string", example: "Dispute resolved" },
+                    data: {
+                      type: "object",
+                      properties: {
+                        booking: { $ref: "#/components/schemas/Booking" },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          400: { description: "Booking is not in disputed status or invalid resolution" },
+          401: { $ref: "#/components/responses/Unauthorized" },
+          403: { $ref: "#/components/responses/Forbidden" },
+          404: { $ref: "#/components/responses/NotFound" },
+          422: { $ref: "#/components/responses/ValidationError" },
         },
       },
     },
