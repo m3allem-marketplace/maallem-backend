@@ -74,6 +74,7 @@ const swaggerDocument = {
     { name: "Chat", description: "Client (`user`) or worker + Bearer token" },
     { name: "Users (Client)", description: "Client (`user` role) private dashboard + Bearer token" },
     { name: "Notifications", description: "User notifications (read, delete, list, unread count) + Bearer token" },
+    { name: "Pusher", description: "Pusher real-time channels authentication" },
   ],
   components: {
     securitySchemes: {
@@ -595,6 +596,20 @@ const swaggerDocument = {
           },
           createdAt: { type: "string", format: "date-time" },
           updatedAt: { type: "string", format: "date-time" },
+        },
+      },
+      PusherAuthRequest: {
+        type: "object",
+        required: ["socket_id", "channel_name"],
+        properties: {
+          socket_id: { type: "string", example: "1234.5678" },
+          channel_name: { type: "string", example: "private-user-674a1b2c3d4e5f6789012345" },
+        },
+      },
+      PusherAuthResponse: {
+        type: "object",
+        properties: {
+          auth: { type: "string", example: "9a5cc772ee86fc417d71:436f568a52de0..." },
         },
       },
     },
@@ -2256,6 +2271,49 @@ const swaggerDocument = {
           },
           401: { $ref: "#/components/responses/Unauthorized" },
           404: { $ref: "#/components/responses/NotFound" },
+        },
+      },
+    },
+    "/pusher/auth": {
+      post: {
+        tags: ["Pusher"],
+        summary: "Authorize Pusher channel subscription",
+        description:
+          "Authorizes subscription to private channels: `private-user-{userId}` for notifications, " +
+          "or `private-conversation-{conversationId}` for chats. The authenticated user must be a participant " +
+          "or the recipient to successfully authorize.",
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/PusherAuthRequest" },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: "Channel subscription authorized",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/PusherAuthResponse" },
+              },
+            },
+          },
+          401: { $ref: "#/components/responses/Unauthorized" },
+          403: {
+            description: "Forbidden — user is not authorized to subscribe to this channel",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    message: { type: "string", example: "Forbidden" },
+                  },
+                },
+              },
+            },
+          },
         },
       },
     },
