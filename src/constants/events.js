@@ -23,7 +23,4 @@ module.exports = {
   CHAT_CHANNELS,
   NOTIFICATION_EVENTS,
   NOTIFICATION_CHANNELS,
-};
-
-
-module.exports = { CHAT_EVENTS, CHAT_CHANNELS };
+};

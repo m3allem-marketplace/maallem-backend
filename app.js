@@ -2,7 +2,10 @@ const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
-const { errorHandler, notFound } = require("./src/middlewares/error.middleware");
+const {
+  errorHandler,
+  notFound,
+} = require("./src/middlewares/error.middleware");
 const authRoutes = require("./src/modules/auth/auth.routes");
 const profilesRoutes = require("./src/modules/profiles/profiles.routes");
 const projectsRoutes = require("./src/modules/projects/projects.routes");
@@ -12,7 +15,8 @@ const usersRoutes = require("./src/modules/users/users.routes");
 const { buildSwaggerSpec } = require("./src/docs/swagger");
 const { getSwaggerHtml } = require("./src/docs/swaggerPage");
 const notificationsRoutes = require("./src/modules/notifications/notifications.routes");
-
+const pusher = require("./src/config/pusher");
+const { protect } = require("./src/modules/auth/auth.middleware");
 
 const app = express();
 
@@ -23,7 +27,12 @@ app.use(
     contentSecurityPolicy: false,
   }),
 );
-app.use(cors());
+app.use(
+  cors({
+    origin: "*", // open for local testing only
+    credentials: false,
+  }),
+);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -31,13 +40,41 @@ app.use(express.urlencoded({ extended: true }));
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 دقيقة
   max: 100,
-  message: { success: false, message: "Too many requests, please try again later" },
+  message: {
+    success: false,
+    message: "Too many requests, please try again later",
+  },
 });
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 10, 
-  message: { success: false, message: "Too many auth attempts, please try again later" },
+  max: 10,
+  message: {
+    success: false,
+    message: "Too many auth attempts, please try again later",
+  },
+});
+
+app.post("/api/v1/pusher/auth", protect, (req, res) => {
+  const { socket_id, channel_name } = req.body;
+
+  // only allow participants to subscribe to their own channels
+  // private-conversation-{id} and private-user-{userId}
+  const userId = req.user.id;
+
+  // allow user notification channel
+  if (channel_name === `private-user-${userId}`) {
+    const auth = pusher.authorizeChannel(socket_id, channel_name);
+    return res.json(auth);
+  }
+
+  // allow conversation channel — backend will verify participation
+  if (channel_name.startsWith("private-conversation-")) {
+    const auth = pusher.authorizeChannel(socket_id, channel_name);
+    return res.json(auth);
+  }
+
+  return res.status(403).json({ message: "Forbidden" });
 });
 
 // ─── Swagger API Docs (CDN — works on Vercel serverless) ─────────────────────

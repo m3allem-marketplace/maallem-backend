@@ -183,9 +183,11 @@ const sendMessage = async (
       ? conversation.worker
       : conversation.client;
 
+  const senderName = message.sender?.name || "Someone";
+
   await notificationsService.notifyNewMessage(
     recipientId,
-    senderName, // get from req.user or populate sender
+    senderName,
     conversationId,
   );
 
