@@ -15,8 +15,6 @@ const usersRoutes = require("./src/modules/users/users.routes");
 const { buildSwaggerSpec } = require("./src/docs/swagger");
 const { getSwaggerHtml } = require("./src/docs/swaggerPage");
 const notificationsRoutes = require("./src/modules/notifications/notifications.routes");
-const pusher = require("./src/config/pusher");
-const { protect } = require("./src/modules/auth/auth.middleware");
 
 const app = express();
 
@@ -35,25 +33,6 @@ app.use(
 );
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
-// ─── Rate Limiting ────────────────────────────────────────────────────────────
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 دقيقة
-  max: 100,
-  message: {
-    success: false,
-    message: "Too many requests, please try again later",
-  },
-});
-
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 10,
-  message: {
-    success: false,
-    message: "Too many auth attempts, please try again later",
-  },
-});
 
 app.post("/api/v1/pusher/auth", protect, (req, res) => {
   const { socket_id, channel_name } = req.body;
@@ -75,6 +54,25 @@ app.post("/api/v1/pusher/auth", protect, (req, res) => {
   }
 
   return res.status(403).json({ message: "Forbidden" });
+});
+
+// ─── Rate Limiting ────────────────────────────────────────────────────────────
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 دقيقة
+  max: 100,
+  message: {
+    success: false,
+    message: "Too many requests, please try again later",
+  },
+});
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: {
+    success: false,
+    message: "Too many auth attempts, please try again later",
+  },
 });
 
 // ─── Swagger API Docs (CDN — works on Vercel serverless) ─────────────────────

@@ -73,6 +73,7 @@ const swaggerDocument = {
     { name: "Chat (Client)", description: "Client (`user` role) + Bearer token" },
     { name: "Chat", description: "Client (`user`) or worker + Bearer token" },
     { name: "Users (Client)", description: "Client (`user` role) private dashboard + Bearer token" },
+    { name: "Notifications", description: "User notifications (read, delete, list, unread count) + Bearer token" },
   ],
   components: {
     securitySchemes: {
@@ -558,6 +559,42 @@ const swaggerDocument = {
             format: "binary",
             description: "Image or document attachment",
           },
+        },
+      },
+      Notification: {
+        type: "object",
+        properties: {
+          _id: { type: "string", example: "674a1b2c3d4e5f6789012349" },
+          recipient: { type: "string", description: "User ID of the recipient", example: "674a1b2c3d4e5f6789012345" },
+          type: {
+            type: "string",
+            enum: [
+              "new_proposal",
+              "proposal_accepted",
+              "proposal_rejected",
+              "new_message",
+              "payment_received",
+              "new_review",
+              "booking_status_changed",
+            ],
+            example: "new_proposal",
+          },
+          title: { type: "string", example: "New Proposal Received" },
+          message: { type: "string", example: "Ahmad Mohammad submitted a proposal on your project \"تصليح سباكة\"" },
+          isRead: { type: "boolean", example: false },
+          data: {
+            type: "object",
+            properties: {
+              projectId: { type: "string", nullable: true, example: "674a1b2c3d4e5f6789012345" },
+              proposalId: { type: "string", nullable: true, example: "674a1b2c3d4e5f6789012346" },
+              conversationId: { type: "string", nullable: true, example: "674a1b2c3d4e5f6789012347" },
+              paymentId: { type: "string", nullable: true, example: null },
+              reviewId: { type: "string", nullable: true, example: null },
+              bookingId: { type: "string", nullable: true, example: null },
+            },
+          },
+          createdAt: { type: "string", format: "date-time" },
+          updatedAt: { type: "string", format: "date-time" },
         },
       },
     },
@@ -2026,6 +2063,198 @@ const swaggerDocument = {
           },
           401: { $ref: "#/components/responses/Unauthorized" },
           403: { description: "Not a participant in this conversation" },
+          404: { $ref: "#/components/responses/NotFound" },
+        },
+      },
+    },
+    "/notifications": {
+      get: {
+        tags: ["Notifications"],
+        summary: "Get my notifications",
+        description: "Returns paginated list of notifications for the authenticated user, sorted by newest first.",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: "page",
+            in: "query",
+            schema: { type: "integer", minimum: 1, default: 1 },
+            description: "Page number",
+          },
+          {
+            name: "limit",
+            in: "query",
+            schema: { type: "integer", minimum: 1, default: 20 },
+            description: "Number of notifications per page",
+          },
+        ],
+        responses: {
+          200: {
+            description: "Notifications fetched successfully",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    success: { type: "boolean", example: true },
+                    message: { type: "string", example: "Notifications fetched" },
+                    data: {
+                      type: "object",
+                      properties: {
+                        notifications: {
+                          type: "array",
+                          items: { $ref: "#/components/schemas/Notification" },
+                        },
+                        unreadCount: { type: "integer", example: 2 },
+                        pagination: {
+                          type: "object",
+                          properties: {
+                            page: { type: "integer", example: 1 },
+                            limit: { type: "integer", example: 20 },
+                            total: { type: "integer", example: 5 },
+                            pages: { type: "integer", example: 1 },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          401: { $ref: "#/components/responses/Unauthorized" },
+        },
+      },
+    },
+    "/notifications/unread-count": {
+      get: {
+        tags: ["Notifications"],
+        summary: "Get unread notifications count",
+        description: "Returns the total number of unread notifications for the authenticated user.",
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: {
+            description: "Unread count fetched successfully",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    success: { type: "boolean", example: true },
+                    message: { type: "string", example: "Unread count fetched" },
+                    data: {
+                      type: "object",
+                      properties: {
+                        unreadCount: { type: "integer", example: 2 },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          401: { $ref: "#/components/responses/Unauthorized" },
+        },
+      },
+    },
+    "/notifications/read-all": {
+      patch: {
+        tags: ["Notifications"],
+        summary: "Mark all notifications as read",
+        description: "Marks all unread notifications of the authenticated user as read.",
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: {
+            description: "All notifications marked as read successfully",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    success: { type: "boolean", example: true },
+                    message: { type: "string", example: "All notifications marked as read" },
+                    data: { type: "object", nullable: true, example: null },
+                  },
+                },
+              },
+            },
+          },
+          401: { $ref: "#/components/responses/Unauthorized" },
+        },
+      },
+    },
+    "/notifications/{id}/read": {
+      patch: {
+        tags: ["Notifications"],
+        summary: "Mark a single notification as read",
+        description: "Marks a specific notification of the authenticated user as read.",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: { type: "string" },
+            description: "Notification MongoDB _id",
+          },
+        ],
+        responses: {
+          200: {
+            description: "Notification marked as read successfully",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    success: { type: "boolean", example: true },
+                    message: { type: "string", example: "Notification marked as read" },
+                    data: {
+                      type: "object",
+                      properties: {
+                        notification: { $ref: "#/components/schemas/Notification" },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          401: { $ref: "#/components/responses/Unauthorized" },
+          404: { $ref: "#/components/responses/NotFound" },
+        },
+      },
+    },
+    "/notifications/{id}": {
+      delete: {
+        tags: ["Notifications"],
+        summary: "Delete a notification",
+        description: "Deletes a specific notification belonging to the authenticated user.",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: { type: "string" },
+            description: "Notification MongoDB _id",
+          },
+        ],
+        responses: {
+          200: {
+            description: "Notification deleted successfully",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    success: { type: "boolean", example: true },
+                    message: { type: "string", example: "Notification deleted" },
+                    data: { type: "object", nullable: true, example: null },
+                  },
+                },
+              },
+            },
+          },
+          401: { $ref: "#/components/responses/Unauthorized" },
           404: { $ref: "#/components/responses/NotFound" },
         },
       },

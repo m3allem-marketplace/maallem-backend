@@ -54,7 +54,6 @@ const getMessages = async (conversationId, userId, page = 1, limit = 30) => {
   const conversation = await Conversation.findById(conversationId);
   if (!conversation) throw new AppError("Conversation not found", 404);
 
-  // verify user is a participant
   const isParticipant =
     conversation.client.toString() === userId ||
     conversation.worker.toString() === userId;
@@ -77,7 +76,7 @@ const getMessages = async (conversationId, userId, page = 1, limit = 30) => {
   const total = await Message.countDocuments({ conversation: conversationId });
 
   return {
-    messages: messages.reverse(), // oldest first
+    messages: messages.reverse(),
     pagination: {
       page,
       limit,
@@ -98,7 +97,6 @@ const sendMessage = async (
   const conversation = await Conversation.findById(conversationId);
   if (!conversation) throw new AppError("Conversation not found", 404);
 
-  // verify sender is a participant
   const isParticipant =
     conversation.client.toString() === senderId ||
     conversation.worker.toString() === senderId;
@@ -154,14 +152,12 @@ const sendMessage = async (
   });
 
   await message.populate("sender", "name email");
+  const senderName = message.sender.name;
 
-  // update conversation lastMessage + unread count
-  const recipientRole =
-    conversation.client.toString() === senderId ? "client" : "worker";
-
-  // increment unread for the OTHER person
-  const unreadField =
-    recipientRole === "client" ? "unreadCount.worker" : "unreadCount.client";
+  // ✅ FIX: كانت المعادلة معكوسة — لو الـ sender هو client، المستقبل هو worker
+  const isClient = conversation.client.toString() === senderId;
+  const unreadField = isClient ? "unreadCount.worker" : "unreadCount.client";
+  const recipientId = isClient ? conversation.worker : conversation.client;
 
   await Conversation.findByIdAndUpdate(conversationId, {
     lastMessage: message._id,
@@ -169,19 +165,19 @@ const sendMessage = async (
     $inc: { [unreadField]: 1 },
   });
 
-  // trigger Pusher event
-  await pusher.trigger(
-    CHAT_CHANNELS.conversation(conversationId),
-    CHAT_EVENTS.NEW_MESSAGE,
-    {
-      message,
-      conversationId,
-    },
-  );
-  const recipientId =
-    conversation.client.toString() === senderId
-      ? conversation.worker
-      : conversation.client;
+  // ✅ FIX: Pusher في try/catch منفصل — فشله لا يرجع 500 للـ client
+  try {
+    await pusher.trigger(
+      CHAT_CHANNELS.conversation(conversationId),
+      CHAT_EVENTS.NEW_MESSAGE,
+      {
+        message,
+        conversationId,
+      },
+    );
+  } catch (e) {
+    console.error("Pusher trigger failed:", e.message);
+  }
 
   const senderName = message.sender?.name || "Someone";
 
@@ -210,7 +206,6 @@ const markAsRead = async (conversationId, userId, userRole) => {
     );
   }
 
-  // mark all unread messages from the OTHER person as read
   await Message.updateMany(
     {
       conversation: conversationId,
@@ -220,7 +215,6 @@ const markAsRead = async (conversationId, userId, userRole) => {
     { isRead: true },
   );
 
-  // reset unread count for this user
   const unreadField =
     userRole === "user" ? "unreadCount.client" : "unreadCount.worker";
 
@@ -228,12 +222,16 @@ const markAsRead = async (conversationId, userId, userRole) => {
     [unreadField]: 0,
   });
 
-  // notify the other participant via Pusher
-  await pusher.trigger(
-    CHAT_CHANNELS.conversation(conversationId),
-    CHAT_EVENTS.MESSAGE_READ,
-    { conversationId, readBy: userId },
-  );
+  // ✅ FIX: Pusher في try/catch منفصل
+  try {
+    await pusher.trigger(
+      CHAT_CHANNELS.conversation(conversationId),
+      CHAT_EVENTS.MESSAGE_READ,
+      { conversationId, readBy: userId },
+    );
+  } catch (e) {
+    console.error("Pusher read trigger failed:", e.message);
+  }
 
   return { success: true };
 };
@@ -245,4 +243,3 @@ module.exports = {
   sendMessage,
   markAsRead,
 };
-// ─── Notify recipient of new message ─────────────────────────────────────────
