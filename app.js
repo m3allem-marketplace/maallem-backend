@@ -44,7 +44,6 @@ app.post("/api/v1/pusher/auth", protect, (req, res) => {
   const { socket_id, channel_name } = req.body;
 
   // only allow participants to subscribe to their own channels
-  // private-conversation-{id} and private-user-{userId}
   const userId = req.user.id;
 
   // allow user notification channel
