@@ -1,4 +1,9 @@
 {
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js",
+    "seed:materials": "node scripts/seedMaterialPrices.js"
+  },
   "dependencies": {
     "bcryptjs": "^3.0.3",
     "cloudinary": "^2.10.0",
@@ -11,6 +16,7 @@
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.6.2",
     "multer": "^2.1.1",
+    "openai": "^6.42.0",
     "pusher": "^5.3.3",
     "swagger-ui-express": "^5.0.1"
   }

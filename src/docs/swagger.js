@@ -55,7 +55,8 @@ const swaggerDocument = {
       "**Projects:** Clients (`user` role) post and manage projects. Public listing and details.\n\n" +
       "**Proposals:** Workers submit proposals on open projects. Clients accept/reject proposals.\n\n" +
       "**Chat:** Clients start conversations with workers; both can list conversations, send/receive messages (text, image, or file), and mark messages as read.\n\n" +
-      "**Users (Client Dashboard):** Single private endpoint aggregating the client's projects, pending proposals, conversations, and summary stats.",
+      "**Users (Client Dashboard):** Single private endpoint aggregating the client's projects, pending proposals, conversations, and summary stats.\n\n" +
+      "**AI Estimation:** Analyze a natural-language task description (Arabic/English), extract dimensions via OpenAI, then compute quantities and pricing using a rule engine and internal material prices (no supplier contact).",
     contact: {
       name: "Maallem Team",
     },
@@ -76,6 +77,7 @@ const swaggerDocument = {
     { name: "Notifications", description: "User notifications (read, delete, list, unread count) + Bearer token" },
     { name: "Pusher", description: "Pusher real-time channels authentication" },
     { name: "Bookings", description: "Agreement and Escrow payment workflow between Client and Worker" },
+    { name: "AI", description: "AI-powered task analysis and cost estimation (OpenAI extraction + rule engine)" },
   ],
   components: {
     securitySchemes: {
@@ -658,6 +660,78 @@ const swaggerDocument = {
         required: ["resolution"],
         properties: {
           resolution: { type: "string", enum: ["refund", "release"], example: "refund" },
+        },
+      },
+      AiAnalyzeRequest: {
+        type: "object",
+        required: ["serviceType", "description"],
+        properties: {
+          serviceType: {
+            type: "string",
+            enum: ["painting", "ceramic", "plumbing"],
+            example: "painting",
+            description: "Type of construction service",
+          },
+          description: {
+            type: "string",
+            minLength: 5,
+            maxLength: 2000,
+            example: "أريد دهان غرفة 4×5 متر وارتفاعها 3 متر",
+            description: "Natural language description of the task (Arabic or English)",
+          },
+        },
+      },
+      AiEstimationMaterial: {
+        type: "object",
+        properties: {
+          sku: { type: "string", example: "PAINT001" },
+          name: { type: "string", example: "White Paint" },
+          quantity: { type: "number", example: 8 },
+          unit: { type: "string", example: "liter" },
+          unitPrice: { type: "number", example: 150 },
+          totalPrice: { type: "number", example: 1200 },
+        },
+      },
+      AiEstimationResult: {
+        type: "object",
+        properties: {
+          serviceType: {
+            type: "string",
+            enum: ["painting", "ceramic", "plumbing"],
+            example: "painting",
+          },
+          estimatedArea: {
+            type: "number",
+            example: 54,
+            description: "Wall area (painting), floor area (ceramic), or bathroom area (plumbing) in m²",
+          },
+          laborHours: { type: "number", example: 8 },
+          materials: {
+            type: "array",
+            items: { $ref: "#/components/schemas/AiEstimationMaterial" },
+          },
+          materialsTotal: { type: "number", example: 1200 },
+          laborCost: { type: "number", example: 800 },
+          platformFee: { type: "number", example: 150 },
+          grandTotal: { type: "number", example: 2150 },
+        },
+      },
+      MaterialPrice: {
+        type: "object",
+        properties: {
+          _id: { type: "string", example: "674a1b2c3d4e5f6789012351" },
+          sku: { type: "string", example: "PAINT001" },
+          name: { type: "string", example: "White Paint" },
+          unit: { type: "string", example: "liter" },
+          unitPrice: { type: "number", example: 150 },
+          category: {
+            type: "string",
+            enum: ["painting", "ceramic", "plumbing"],
+            example: "painting",
+          },
+          isActive: { type: "boolean", example: true },
+          createdAt: { type: "string", format: "date-time" },
+          updatedAt: { type: "string", format: "date-time" },
         },
       },
     },
@@ -2662,6 +2736,124 @@ const swaggerDocument = {
           401: { $ref: "#/components/responses/Unauthorized" },
           403: { $ref: "#/components/responses/Forbidden" },
           404: { $ref: "#/components/responses/NotFound" },
+        },
+      },
+    },
+    "/ai/analyze": {
+      post: {
+        tags: ["AI"],
+        summary: "Analyze task description and estimate cost",
+        description:
+          "No authentication required.\n\n" +
+          "**Flow:**\n" +
+          "1. OpenAI extracts structured dimensions from the description (JSON only — no calculations).\n" +
+          "2. Rule engine computes areas, material quantities, and labor hours.\n" +
+          "3. BOQ is generated from estimation rules.\n" +
+          "4. Material prices are fetched from MongoDB (`materialprices` collection).\n" +
+          "5. Total cost is calculated and the estimation is saved to `aiestimations`.\n\n" +
+          "**Supported service types:** `painting`, `ceramic`, `plumbing`.",
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/AiAnalyzeRequest" },
+              examples: {
+                painting: {
+                  summary: "Painting a room",
+                  value: {
+                    serviceType: "painting",
+                    description: "أريد دهان غرفة 4×5 متر وارتفاعها 3 متر",
+                  },
+                },
+                ceramic: {
+                  summary: "Ceramic floor installation",
+                  value: {
+                    serviceType: "ceramic",
+                    description: "أريد تركيب سيراميك لغرفة 4×5 متر",
+                  },
+                },
+                plumbing: {
+                  summary: "Bathroom plumbing",
+                  value: {
+                    serviceType: "plumbing",
+                    description: "أريد أعمال سباكة لحمام 6 متر مربع",
+                  },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: "Estimation completed successfully",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    success: { type: "boolean", example: true },
+                    message: { type: "string", example: "Estimation completed successfully" },
+                    data: { $ref: "#/components/schemas/AiEstimationResult" },
+                  },
+                },
+                example: {
+                  success: true,
+                  message: "Estimation completed successfully",
+                  data: {
+                    serviceType: "painting",
+                    estimatedArea: 54,
+                    laborHours: 8,
+                    materials: [
+                      {
+                        sku: "PAINT001",
+                        name: "White Paint",
+                        quantity: 8,
+                        unit: "liter",
+                        unitPrice: 150,
+                        totalPrice: 1200,
+                      },
+                    ],
+                    materialsTotal: 1200,
+                    laborCost: 800,
+                    platformFee: 150,
+                    grandTotal: 2150,
+                  },
+                },
+              },
+            },
+          },
+          422: {
+            description: "Validation failed or could not extract dimensions from description",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/ErrorResponse" },
+              },
+            },
+          },
+          404: {
+            description: "Material price not found in database (run seed:materials first)",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/ErrorResponse" },
+              },
+            },
+          },
+          500: {
+            description: "OpenAI API key not configured",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/ErrorResponse" },
+              },
+            },
+          },
+          502: {
+            description: "OpenAI returned invalid or empty response",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/ErrorResponse" },
+              },
+            },
+          },
         },
       },
     },

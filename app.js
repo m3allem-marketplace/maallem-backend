@@ -17,6 +17,7 @@ const { NODE_ENV } = require("./src/config/env");
 const { getSwaggerHtml } = require("./src/docs/swaggerPage");
 const notificationsRoutes = require("./src/modules/notifications/notifications.routes");
 const bookingsRoutes = require("./src/modules/bookings/bookings.routes");
+const aiRoutes = require("./src/modules/ai/ai.routes");
 const { protect } = require("./src/modules/auth/auth.middleware");
 
 
@@ -122,6 +123,7 @@ app.get("/api/v1", (req, res) => {
       projects: "/api/v1/projects",
       proposals: "/api/v1/proposals",
       users: "/api/v1/users",
+      ai: "/api/v1/ai",
       health: "/health",
     },
   });
@@ -145,6 +147,9 @@ app.use("/api/notifications", notificationsRoutes); // alias
 
 app.use("/api/v1/bookings", bookingsRoutes);
 app.use("/api/bookings", bookingsRoutes); // alias
+
+app.use("/api/v1/ai", aiRoutes);
+app.use("/api/ai", aiRoutes); // alias
 
 // ─── Error Handling ───────────────────────────────────────────────────────────
 app.use(notFound);

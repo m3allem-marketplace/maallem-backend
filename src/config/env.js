@@ -20,4 +20,7 @@ module.exports = {
   API_BASE_URL:
     process.env.API_BASE_URL ||
     (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null),
+  OPENAI_API_KEY: process.env.OPENAI_API_KEY,
+  LABOR_HOURLY_RATE: Number(process.env.LABOR_HOURLY_RATE) || 100,
+  PLATFORM_FEE: Number(process.env.PLATFORM_FEE) || 150,
 };
