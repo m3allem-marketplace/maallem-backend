@@ -8,7 +8,6 @@ const {
 } = require("./prompts");
 const { runEstimation } = require("./estimation.service");
 const { generateBoq } = require("./boq.service");
-const { calculatePricing } = require("./pricing.service");
 
 let openaiClient = null;
 
@@ -99,17 +98,12 @@ const analyzeAndEstimate = async ({ serviceType, description, userId = null }) =
   const extractedData = await extractDataWithAI(serviceType, description);
   const estimation = runEstimation(serviceType, extractedData);
   const boq = generateBoq(estimation);
-  const pricing = await calculatePricing(boq, estimation.laborHours);
 
   const result = {
     serviceType: estimation.serviceType,
     estimatedArea: estimation.estimatedArea,
     laborHours: estimation.laborHours,
-    materials: pricing.materials,
-    materialsTotal: pricing.materialsTotal,
-    laborCost: pricing.laborCost,
-    platformFee: pricing.platformFee,
-    grandTotal: pricing.grandTotal,
+    materials: boq.materials,
   };
 
   await AiEstimation.create({
