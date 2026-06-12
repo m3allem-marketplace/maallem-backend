@@ -77,7 +77,7 @@ const extractDataWithAI = async (serviceType, description) => {
   const client = getOpenAIClient();
 
   const completion = await client.chat.completions.create({
-    model: "gemini-1.5-flash",
+    model: "gemini-2.5-flash",
     temperature: 0,
     response_format: { type: "json_object" },
     messages: [
