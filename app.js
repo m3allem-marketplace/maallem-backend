@@ -13,6 +13,7 @@ const proposalsRoutes = require("./src/modules/proposals/proposals.routes");
 const chatRoutes = require("./src/modules/chat/chat.routes");
 const usersRoutes = require("./src/modules/users/users.routes");
 const { buildSwaggerSpec } = require("./src/docs/swagger");
+const { NODE_ENV } = require("./src/config/env");
 const { getSwaggerHtml } = require("./src/docs/swaggerPage");
 const notificationsRoutes = require("./src/modules/notifications/notifications.routes");
 const bookingsRoutes = require("./src/modules/bookings/bookings.routes");
@@ -20,6 +21,7 @@ const { protect } = require("./src/modules/auth/auth.middleware");
 
 
 const app = express();
+app.set("trust proxy", 1);
 
 // ─── Security Middlewares ─────────────────────────────────────────────────────
 app.use(
@@ -62,7 +64,7 @@ app.post("/api/v1/pusher/auth", protect, (req, res) => {
 // ─── Rate Limiting ────────────────────────────────────────────────────────────
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 دقيقة
-  max: 100,
+  max: NODE_ENV === "development" ? 10000 : 1000,
   message: {
     success: false,
     message: "Too many requests, please try again later",
@@ -71,7 +73,7 @@ const limiter = rateLimit({
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 10,
+  max: NODE_ENV === "development" ? 1000 : 100,
   message: {
     success: false,
     message: "Too many auth attempts, please try again later",
