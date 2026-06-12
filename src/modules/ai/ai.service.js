@@ -17,7 +17,10 @@ const getOpenAIClient = () => {
     throw new AppError("OpenAI API key is not configured", 500);
   }
   if (!openaiClient) {
-    openaiClient = new OpenAI({ apiKey: OPENAI_API_KEY });
+    openaiClient = new OpenAI({
+      apiKey: OPENAI_API_KEY,
+      baseURL: "https://generativelanguage.googleapis.com/v1beta/openai/"
+    });
   }
   return openaiClient;
 };
@@ -74,7 +77,7 @@ const extractDataWithAI = async (serviceType, description) => {
   const client = getOpenAIClient();
 
   const completion = await client.chat.completions.create({
-    model: "gpt-4o-mini",
+    model: "gemini-1.5-flash",
     temperature: 0,
     response_format: { type: "json_object" },
     messages: [
