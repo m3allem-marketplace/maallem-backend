@@ -1,7 +1,7 @@
 // Async error handler wrapper - catches both sync and async errors
 const catchAsync = (fn) => {
   return (req, res, next) => {
-    // Wrap in try-catch for synchronous errors
+    // Wrap in try-catch for synchronous 
     try {
       // Call the function and handle any promise rejections
       const result = fn(req, res, next);
