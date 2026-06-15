@@ -52,7 +52,7 @@ const getMyConversations = async (userId, userRole) => {
       { conversationId },
     )
     .catch((err) => console.error("Pusher read event error:", err.message));
-  return Conversation.find(filter)
+  return Conversation.find(filter) 
     .populate("client", "name email")
     .populate("worker", "name email")
     .populate("lastMessage")
