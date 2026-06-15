@@ -11,13 +11,15 @@ const getOrCreateConversation = async (
   workerId,
   projectId = null,
 ) => {
-  let conversation = await Conversation.findOne({
+  const query = {
     client: clientId,
     worker: workerId,
-  })
+  };
+  let conversation = await Conversation.findOne(query)
     .populate("client", "name email")
     .populate("worker", "name email")
     .populate("lastMessage");
+
 
   if (!conversation) {
     // FIX 1: fetch with populate after create
@@ -26,7 +28,7 @@ const getOrCreateConversation = async (
       worker: workerId,
       project: projectId || null,
     });
-
+  if (projectId) query.project = projectId;
     conversation = await Conversation.findById(created._id)
       .populate("client", "name email")
       .populate("worker", "name email");

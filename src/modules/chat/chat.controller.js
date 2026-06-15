@@ -2,6 +2,7 @@ const chatService = require("./chat.service");
 const catchAsync = require("../../utils/catchAsync");
 const AppError = require("../../utils/AppError");
 const { sendResponse } = require("../../utils/apiResponse");
+const pusher = require("../../config/pusher");
 
 // ─── Start or get conversation ────────────────────────────────────────────────
 const startConversation = catchAsync(async (req, res) => {
@@ -19,6 +20,16 @@ const startConversation = catchAsync(async (req, res) => {
   sendResponse(res, 200, { conversation }, "Conversation ready");
 });
 
+const authenticatePusher = catchAsync(async (req, res) => {
+  const socketId = req.body.socket_id;
+  const channel = req.body.channel_name;
+
+  // Basic validation: Ensure the user is actually part of the conversation they are trying to join.
+  // E.g., if channel is 'private-conversation-123', verify req.user.id is in conversation 123.
+
+  const authResponse = pusher.authorizeChannel(socketId, channel);
+  res.send(authResponse);
+});
 // ─── Get my conversations ─────────────────────────────────────────────────────
 const getMyConversations = catchAsync(async (req, res) => {
   const conversations = await chatService.getMyConversations(
@@ -71,4 +82,5 @@ module.exports = {
   getMessages,
   sendMessage,
   markAsRead,
+  authenticatePusher
 };

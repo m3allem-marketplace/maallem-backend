@@ -36,8 +36,7 @@ const conversationSchema = new mongoose.Schema(
   { timestamps: true },
 );
 
-conversationSchema.index({ client: 1, worker: 1 }, { unique: true });
-
+conversationSchema.index({ client: 1, worker: 1, project: 1 }, { unique: true });
 // ─── Message schema ──────────────────────────────────────────────────────────────────
 const messageSchema = new mongoose.Schema(
   {
