@@ -35,24 +35,11 @@ const getOrCreateConversation = async (
   return conversation;
 };
 
-// ─── Get my conversations ─────────────────────────────────────────────────────
 const getMyConversations = async (userId, userRole) => {
   const filter =
     userRole === "worker" ? { worker: userId } : { client: userId };
 
-  const otherParticipantId =
-    userRole === "user"
-      ? conversation.worker.toString()
-      : conversation.client.toString();
-
-  pusher
-    .trigger(
-      NOTIFICATION_CHANNELS.user(otherParticipantId),
-      NOTIFICATION_EVENTS.MESSAGE_READ, // add this event to your constants
-      { conversationId },
-    )
-    .catch((err) => console.error("Pusher read event error:", err.message));
-  return Conversation.find(filter) 
+  return Conversation.find(filter)
     .populate("client", "name email")
     .populate("worker", "name email")
     .populate("lastMessage")
