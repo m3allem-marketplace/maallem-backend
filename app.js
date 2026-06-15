@@ -19,6 +19,8 @@ const notificationsRoutes = require("./src/modules/notifications/notifications.r
 const bookingsRoutes = require("./src/modules/bookings/bookings.routes");
 const aiRoutes = require("./src/modules/ai/ai.routes");
 const { protect } = require("./src/modules/auth/auth.middleware");
+const pusher = require("./src/config/pusher");
+
 
 
 const app = express();
@@ -40,7 +42,7 @@ app.use(
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-app.post("/api/v1/pusher/auth", protect, (req, res) => {
+app.post("/api/v1/pusher/auth", protect, async (req, res) => {
   const { socket_id, channel_name } = req.body;
 
   // only allow participants to subscribe to their own channels
@@ -54,9 +56,27 @@ app.post("/api/v1/pusher/auth", protect, (req, res) => {
 
   // allow conversation channel — backend will verify participation
   if (channel_name.startsWith("private-conversation-")) {
+  const conversationId = channel_name.replace("private-conversation-", "");
+  
+  // inline async handler since catchAsync isn't used here
+  try {
+    const { Conversation } = require("./src/modules/chat/chat.model");
+    const conversation = await Conversation.findById(conversationId);
+    
+    if (!conversation) return res.status(404).json({ message: "Conversation not found" });
+
+    const isParticipant =
+      conversation.client.toString() === userId ||
+      conversation.worker.toString() === userId;
+
+    if (!isParticipant) return res.status(403).json({ message: "Forbidden" });
+
     const auth = pusher.authorizeChannel(socket_id, channel_name);
     return res.json(auth);
+  } catch (err) {
+    return res.status(500).json({ message: "Auth error" });
   }
+}
 
   return res.status(403).json({ message: "Forbidden" });
 });

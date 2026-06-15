@@ -15,7 +15,7 @@ const NOTIFICATION_EVENTS = {
 };
 
 const NOTIFICATION_CHANNELS = {
-  user: (userId) => `private-user-${userId}`,
+  user: (userId) => `private-user-${userId.toString()}`,
 };
 
 module.exports = {
@@ -23,4 +23,4 @@ module.exports = {
   CHAT_CHANNELS,
   NOTIFICATION_EVENTS,
   NOTIFICATION_CHANNELS,
-};
+};
