@@ -45,6 +45,37 @@ const protect = async (req, res, next) => {
   }
 };
 
+// ─── OptionalProtect: attach user when token is present ───────────────────────
+
+const optionalProtect = async (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return next();
+    }
+
+    const token = authHeader.split(" ")[1];
+
+    let decoded;
+    try {
+      decoded = jwt.verify(token, JWT_SECRET);
+    } catch (err) {
+      return next();
+    }
+
+    const user = await User.findById(decoded.id);
+
+    if (user && user.isActive) {
+      req.user = { id: user._id.toString(), role: user.role };
+    }
+
+    next();
+  } catch (err) {
+    next(err);
+  }
+};
+
 // ─── Authorize: التحقق من الـ Role ───────────────────────────────────────────
 
 const authorize = (...roles) => {
@@ -63,4 +94,4 @@ const authorize = (...roles) => {
   };
 };
 
-module.exports = { protect, authorize };
+module.exports = { protect, optionalProtect, authorize };

@@ -21,8 +21,17 @@ const list = catchAsync(async (req, res) => {
   sendResponse(res, 200, { projects, count: projects.length }, "Projects fetched");
 });
 
+const listAssigned = catchAsync(async (req, res) => {
+  const result = await projectsService.listAssignedProjects(req.user.id, req.query);
+  sendResponse(res, 200, result, "Assigned projects fetched");
+});
+
 const getById = catchAsync(async (req, res) => {
-  const project = await projectsService.getProjectById(req.params.id);
+  const project = await projectsService.getProjectById(
+    req.params.id,
+    req.user?.id || null,
+    req.user?.role || null,
+  );
   sendResponse(res, 200, { project }, "Project fetched");
 });
 
@@ -59,4 +68,4 @@ const patchStatus = catchAsync(async (req, res) => {
   sendResponse(res, 200, { project }, "Project status updated");
 });
 
-module.exports = { list, getById, create, update, remove, patchStatus };
+module.exports = { list, listAssigned, getById, create, update, remove, patchStatus };
