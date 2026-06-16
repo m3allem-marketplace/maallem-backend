@@ -50,6 +50,19 @@ const listWorkers = async (query = {}) => {
     filter.specializations = new RegExp(query.specialization, "i");
   }
 
+  // البحث بالقرب لو الـ client بعت lat/lng
+  if (query.lat && query.lng) {
+    filter["location.coordinates"] = {
+      $near: {
+        $geometry: {
+          type: "Point",
+          coordinates: [parseFloat(query.lng), parseFloat(query.lat)],
+        },
+        $maxDistance: parseInt(query.radius) || 10000, // default 10km
+      },
+    };
+  }
+
   return WorkerProfile.find(filter)
     .populate("user", USER_PUBLIC_FIELDS)
     .sort({ createdAt: -1 });

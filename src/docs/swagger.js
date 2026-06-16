@@ -9,8 +9,7 @@ const getRequestBaseUrl = (req) => {
     (req.secure ? "https" : "http") ||
     "https";
   const host =
-    req.headers["x-forwarded-host"]?.split(",")[0]?.trim() ||
-    req.headers.host;
+    req.headers["x-forwarded-host"]?.split(",")[0]?.trim() || req.headers.host;
   if (!host) return null;
   return `${protocol}://${host}`;
 };
@@ -63,21 +62,64 @@ const swaggerDocument = {
   },
   tags: [
     { name: "Auth", description: "Registration, login, tokens" },
-    { name: "Profiles - Workers (Public)", description: "No authentication required" },
-    { name: "Profiles - Companies (Public)", description: "No authentication required" },
-    { name: "Profiles - Worker (Me)", description: "Worker role + Bearer token" },
-    { name: "Profiles - Company (Me)", description: "Company role + Bearer token" },
-    { name: "Projects (Public)", description: "Public project listing and details" },
-    { name: "Projects (Client)", description: "Client (`user` role) + Bearer token" },
+    {
+      name: "Profiles - Workers (Public)",
+      description: "No authentication required",
+    },
+    {
+      name: "Profiles - Companies (Public)",
+      description: "No authentication required",
+    },
+    {
+      name: "Profiles - Worker (Me)",
+      description: "Worker role + Bearer token",
+    },
+    {
+      name: "Profiles - Company (Me)",
+      description: "Company role + Bearer token",
+    },
+    {
+      name: "Projects (Public)",
+      description: "Public project listing and details",
+    },
+    {
+      name: "Projects (Client)",
+      description: "Client (`user` role) + Bearer token",
+    },
+    {
+      name: "Projects (Worker)",
+      description: "Worker role — assigned projects + Bearer token",
+    },
     { name: "Proposals (Worker)", description: "Worker role + Bearer token" },
-    { name: "Proposals (Client)", description: "Client (`user` role) + Bearer token" },
-    { name: "Chat (Client)", description: "Client (`user` role) + Bearer token" },
+    {
+      name: "Proposals (Client)",
+      description: "Client (`user` role) + Bearer token",
+    },
+    {
+      name: "Chat (Client)",
+      description: "Client (`user` role) + Bearer token",
+    },
     { name: "Chat", description: "Client (`user`) or worker + Bearer token" },
-    { name: "Users (Client)", description: "Client (`user` role) private dashboard + Bearer token" },
-    { name: "Notifications", description: "User notifications (read, delete, list, unread count) + Bearer token" },
+    {
+      name: "Users (Client)",
+      description: "Client (`user` role) private dashboard + Bearer token",
+    },
+    {
+      name: "Notifications",
+      description:
+        "User notifications (read, delete, list, unread count) + Bearer token",
+    },
     { name: "Pusher", description: "Pusher real-time channels authentication" },
-    { name: "Bookings", description: "Agreement and Escrow payment workflow between Client and Worker" },
-    { name: "AI", description: "AI-powered task analysis and cost estimation (OpenAI extraction + rule engine)" },
+    {
+      name: "Bookings",
+      description:
+        "Agreement and Escrow payment workflow between Client and Worker",
+    },
+    {
+      name: "AI",
+      description:
+        "AI-powered task analysis and cost estimation (OpenAI extraction + rule engine)",
+    },
   ],
   components: {
     securitySchemes: {
@@ -108,6 +150,20 @@ const swaggerDocument = {
         properties: {
           address: { type: "string", example: "شارع التحرير، المعادي" },
           city: { type: "string", example: "القاهرة" },
+          coordinates: {
+            type: "object",
+            properties: {
+              type: { type: "string", enum: ["Point"], example: "Point" },
+              coordinates: {
+                type: "array",
+                items: { type: "number" },
+                minItems: 2,
+                maxItems: 2,
+                example: [31.2357, 30.0444],
+                description: "[longitude, latitude]",
+              },
+            },
+          },
         },
       },
       UserPublic: {
@@ -141,8 +197,16 @@ const swaggerDocument = {
         required: ["name", "email", "phone", "password", "confirmPassword"],
         properties: {
           name: { type: "string", minLength: 2, example: "أحمد محمد" },
-          email: { type: "string", format: "email", example: "worker@mail.com" },
-          phone: { type: "string", pattern: "^[0-9]{10,15}$", example: "01012345678" },
+          email: {
+            type: "string",
+            format: "email",
+            example: "worker@mail.com",
+          },
+          phone: {
+            type: "string",
+            pattern: "^[0-9]{10,15}$",
+            example: "01012345678",
+          },
           password: { type: "string", minLength: 8, example: "password123" },
           confirmPassword: { type: "string", example: "password123" },
           role: {
@@ -157,7 +221,11 @@ const swaggerDocument = {
         type: "object",
         required: ["email", "password"],
         properties: {
-          email: { type: "string", format: "email", example: "worker@mail.com" },
+          email: {
+            type: "string",
+            format: "email",
+            example: "worker@mail.com",
+          },
           password: { type: "string", example: "password123" },
         },
       },
@@ -165,7 +233,10 @@ const swaggerDocument = {
         type: "object",
         required: ["refreshToken"],
         properties: {
-          refreshToken: { type: "string", example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." },
+          refreshToken: {
+            type: "string",
+            example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+          },
         },
       },
       LogoutRequest: {
@@ -173,7 +244,8 @@ const swaggerDocument = {
         properties: {
           refreshToken: {
             type: "string",
-            description: "Optional — removes specific refresh token from device",
+            description:
+              "Optional — removes specific refresh token from device",
           },
         },
       },
@@ -190,7 +262,11 @@ const swaggerDocument = {
         properties: {
           _id: { type: "string" },
           user: { $ref: "#/components/schemas/UserPublic" },
-          avatar: { type: "string", format: "uri", example: "https://res.cloudinary.com/.../avatar.jpg" },
+          avatar: {
+            type: "string",
+            format: "uri",
+            example: "https://res.cloudinary.com/.../avatar.jpg",
+          },
           bio: { type: "string", example: "فني سباكة وكهرباء..." },
           experience: { type: "string", example: "8 سنوات خبرة" },
           specializations: {
@@ -235,22 +311,29 @@ const swaggerDocument = {
       },
       WorkerProfileBody: {
         type: "object",
-        description: "Use as multipart/form-data fields (text). Arrays can be comma-separated or JSON string.",
+        description:
+          "Use as multipart/form-data fields (text). Arrays can be comma-separated or JSON string.",
         properties: {
           bio: { type: "string" },
           experience: { type: "string" },
           specializations: {
             type: "string",
-            description: 'JSON array or comma-separated, e.g. ["سباكة","كهرباء"] or سباكة,كهرباء',
+            description:
+              'JSON array or comma-separated, e.g. ["سباكة","كهرباء"] or سباكة,كهرباء',
             example: "سباكة,كهرباء,صيانة عامة",
           },
           location: {
             type: "string",
-            description: 'JSON object or plain address, e.g. {"address":"...","city":"القاهرة"}',
+            description:
+              'JSON object or plain address, e.g. {"address":"...","city":"القاهرة"}',
             example: '{"address":"شارع التحرير","city":"القاهرة"}',
           },
           phone: { type: "string", example: "01098765432" },
-          avatar: { type: "string", format: "binary", description: "Profile photo" },
+          avatar: {
+            type: "string",
+            format: "binary",
+            description: "Profile photo",
+          },
           portfolioImages: {
             type: "array",
             items: { type: "string", format: "binary" },
@@ -258,7 +341,8 @@ const swaggerDocument = {
           },
           removePortfolioImages: {
             type: "string",
-            description: "URLs to remove (JSON array or single URL) — update only",
+            description:
+              "URLs to remove (JSON array or single URL) — update only",
           },
         },
       },
@@ -275,7 +359,8 @@ const swaggerDocument = {
           },
           contactPhones: {
             type: "string",
-            description: 'JSON array or comma-separated, e.g. ["0223456789","01012345678"]',
+            description:
+              'JSON array or comma-separated, e.g. ["0223456789","01012345678"]',
             example: "0223456789,01012345678",
           },
           logo: { type: "string", format: "binary" },
@@ -295,8 +380,17 @@ const swaggerDocument = {
         properties: {
           _id: { type: "string", example: "674a1b2c3d4e5f6789012345" },
           client: { $ref: "#/components/schemas/UserPublic" },
+          worker: {
+            allOf: [{ $ref: "#/components/schemas/UserPublic" }],
+            nullable: true,
+            description:
+              "Targeted worker (User _id) when project is sent directly to a worker",
+          },
           title: { type: "string", example: "تصليح سباكة" },
-          description: { type: "string", example: "تسريب في الحمام يحتاج إصلاح عاجل" },
+          description: {
+            type: "string",
+            example: "تسريب في الحمام يحتاج إصلاح عاجل",
+          },
           category: { type: "string", example: "plumbing" },
           location: { $ref: "#/components/schemas/Location" },
           budget: { type: "number", example: 500 },
@@ -304,6 +398,12 @@ const swaggerDocument = {
             type: "string",
             enum: ["open", "closed", "in-progress"],
             example: "open",
+          },
+          isDirect: {
+            type: "boolean",
+            example: true,
+            description:
+              "True when the project was sent directly to a specific worker (private, not in public listing)",
           },
           createdAt: { type: "string", format: "date-time" },
           updatedAt: { type: "string", format: "date-time" },
@@ -313,8 +413,17 @@ const swaggerDocument = {
         type: "object",
         required: ["title"],
         properties: {
-          title: { type: "string", minLength: 3, maxLength: 200, example: "تصليح سباكة" },
-          description: { type: "string", maxLength: 5000, example: "تسريب في الحمام" },
+          title: {
+            type: "string",
+            minLength: 3,
+            maxLength: 200,
+            example: "تصليح سباكة",
+          },
+          description: {
+            type: "string",
+            maxLength: 5000,
+            example: "تسريب في الحمام",
+          },
           category: { type: "string", maxLength: 100, example: "plumbing" },
           location: { $ref: "#/components/schemas/Location" },
           budget: { type: "number", minimum: 0, example: 500 },
@@ -322,6 +431,12 @@ const swaggerDocument = {
             type: "string",
             enum: ["open", "closed", "in-progress"],
             default: "open",
+          },
+          workerId: {
+            type: "string",
+            description:
+              "Worker User _id or Worker profile _id — when set, the worker is notified automatically",
+            example: "674a1b2c3d4e5f6789012346",
           },
         },
       },
@@ -347,6 +462,89 @@ const swaggerDocument = {
           },
         },
       },
+      AssignedProjectSummary: {
+        type: "object",
+        properties: {
+          total: { type: "integer", example: 5 },
+          open: { type: "integer", example: 2 },
+          inProgress: { type: "integer", example: 2 },
+          closed: { type: "integer", example: 1 },
+        },
+      },
+      AssignedProject: {
+        allOf: [
+          { $ref: "#/components/schemas/Project" },
+          {
+            type: "object",
+            properties: {
+              myProposal: {
+                allOf: [{ $ref: "#/components/schemas/Proposal" }],
+                nullable: true,
+                description: "This worker's proposal on the project, if any",
+              },
+            },
+          },
+        ],
+      },
+      WorkerOfferHistoryItem: {
+        type: "object",
+        properties: {
+          id: {
+            type: "string",
+            description:
+              "Project _id for direct requests, Proposal _id for submitted offers",
+          },
+          kind: { type: "string", enum: ["direct_request", "proposal"] },
+          status: {
+            type: "string",
+            enum: [
+              "awaiting_proposal",
+              "pending",
+              "accepted",
+              "rejected",
+              "withdrawn",
+            ],
+            example: "pending",
+          },
+          isDirect: { type: "boolean", example: true },
+          client: { $ref: "#/components/schemas/UserPublic" },
+          project: {
+            type: "object",
+            properties: {
+              _id: { type: "string" },
+              title: { type: "string" },
+              description: { type: "string" },
+              category: { type: "string" },
+              budget: { type: "number" },
+              status: {
+                type: "string",
+                enum: ["open", "closed", "in-progress"],
+              },
+              location: { $ref: "#/components/schemas/Location" },
+              isDirect: { type: "boolean" },
+              createdAt: { type: "string", format: "date-time" },
+              updatedAt: { type: "string", format: "date-time" },
+            },
+          },
+          proposal: {
+            allOf: [{ $ref: "#/components/schemas/Proposal" }],
+            nullable: true,
+          },
+          createdAt: { type: "string", format: "date-time" },
+          updatedAt: { type: "string", format: "date-time" },
+        },
+      },
+      WorkerOfferHistorySummary: {
+        type: "object",
+        properties: {
+          total: { type: "integer", example: 8 },
+          awaitingProposal: { type: "integer", example: 2 },
+          pending: { type: "integer", example: 3 },
+          accepted: { type: "integer", example: 2 },
+          rejected: { type: "integer", example: 1 },
+          withdrawn: { type: "integer", example: 0 },
+        },
+      },
       Proposal: {
         type: "object",
         properties: {
@@ -369,9 +567,17 @@ const swaggerDocument = {
         type: "object",
         required: ["price"],
         properties: {
-          message: { type: "string", maxLength: 3000, example: "أقدر أخلصها في يومين" },
+          message: {
+            type: "string",
+            maxLength: 3000,
+            example: "أقدر أخلصها في يومين",
+          },
           price: { type: "number", minimum: 0, example: 450 },
-          estimatedDuration: { type: "string", maxLength: 200, example: "2 days" },
+          estimatedDuration: {
+            type: "string",
+            maxLength: 200,
+            example: "2 days",
+          },
         },
       },
       UpdateProposalRequest: {
@@ -391,7 +597,8 @@ const swaggerDocument = {
             type: "string",
             enum: ["accepted", "rejected"],
             example: "accepted",
-            description: "Accepting a proposal sets the project to `in-progress` and rejects other pending proposals.",
+            description:
+              "Accepting a proposal sets the project to `in-progress` and rejects other pending proposals.",
           },
         },
       },
@@ -426,9 +633,21 @@ const swaggerDocument = {
           _id: { type: "string", example: "674a1b2c3d4e5f6789012348" },
           conversation: { type: "string", example: "674a1b2c3d4e5f6789012347" },
           sender: { $ref: "#/components/schemas/UserPublic" },
-          senderRole: { type: "string", enum: ["user", "worker"], example: "user" },
-          type: { type: "string", enum: ["text", "image", "file"], example: "text" },
-          content: { type: "string", nullable: true, example: "مرحباً، هل أنت متاح؟" },
+          senderRole: {
+            type: "string",
+            enum: ["user", "worker"],
+            example: "user",
+          },
+          type: {
+            type: "string",
+            enum: ["text", "image", "file"],
+            example: "text",
+          },
+          content: {
+            type: "string",
+            nullable: true,
+            example: "مرحباً، هل أنت متاح؟",
+          },
           fileUrl: { type: "string", format: "uri", nullable: true },
           fileName: { type: "string", nullable: true, example: "plan.pdf" },
           isRead: { type: "boolean", example: false },
@@ -519,7 +738,10 @@ const swaggerDocument = {
                 properties: {
                   _id: { type: "string" },
                   title: { type: "string" },
-                  status: { type: "string", enum: ["open", "closed", "in-progress"] },
+                  status: {
+                    type: "string",
+                    enum: ["open", "closed", "in-progress"],
+                  },
                   category: { type: "string" },
                 },
               },
@@ -539,7 +761,8 @@ const swaggerDocument = {
           pendingProposals: {
             type: "array",
             items: { $ref: "#/components/schemas/PendingProposalWithProject" },
-            description: "Flat list of pending proposals across all projects (action items)",
+            description:
+              "Flat list of pending proposals across all projects (action items)",
           },
           conversations: {
             type: "array",
@@ -569,7 +792,11 @@ const swaggerDocument = {
         type: "object",
         properties: {
           _id: { type: "string", example: "674a1b2c3d4e5f6789012349" },
-          recipient: { type: "string", description: "User ID of the recipient", example: "674a1b2c3d4e5f6789012345" },
+          recipient: {
+            type: "string",
+            description: "User ID of the recipient",
+            example: "674a1b2c3d4e5f6789012345",
+          },
           type: {
             type: "string",
             enum: [
@@ -584,14 +811,30 @@ const swaggerDocument = {
             example: "new_proposal",
           },
           title: { type: "string", example: "New Proposal Received" },
-          message: { type: "string", example: "Ahmad Mohammad submitted a proposal on your project \"تصليح سباكة\"" },
+          message: {
+            type: "string",
+            example:
+              'Ahmad Mohammad submitted a proposal on your project "تصليح سباكة"',
+          },
           isRead: { type: "boolean", example: false },
           data: {
             type: "object",
             properties: {
-              projectId: { type: "string", nullable: true, example: "674a1b2c3d4e5f6789012345" },
-              proposalId: { type: "string", nullable: true, example: "674a1b2c3d4e5f6789012346" },
-              conversationId: { type: "string", nullable: true, example: "674a1b2c3d4e5f6789012347" },
+              projectId: {
+                type: "string",
+                nullable: true,
+                example: "674a1b2c3d4e5f6789012345",
+              },
+              proposalId: {
+                type: "string",
+                nullable: true,
+                example: "674a1b2c3d4e5f6789012346",
+              },
+              conversationId: {
+                type: "string",
+                nullable: true,
+                example: "674a1b2c3d4e5f6789012347",
+              },
               paymentId: { type: "string", nullable: true, example: null },
               reviewId: { type: "string", nullable: true, example: null },
               bookingId: { type: "string", nullable: true, example: null },
@@ -606,13 +849,19 @@ const swaggerDocument = {
         required: ["socket_id", "channel_name"],
         properties: {
           socket_id: { type: "string", example: "1234.5678" },
-          channel_name: { type: "string", example: "private-user-674a1b2c3d4e5f6789012345" },
+          channel_name: {
+            type: "string",
+            example: "private-user-674a1b2c3d4e5f6789012345",
+          },
         },
       },
       PusherAuthResponse: {
         type: "object",
         properties: {
-          auth: { type: "string", example: "9a5cc772ee86fc417d71:436f568a52de0..." },
+          auth: {
+            type: "string",
+            example: "9a5cc772ee86fc417d71:436f568a52de0...",
+          },
         },
       },
       Booking: {
@@ -621,8 +870,16 @@ const swaggerDocument = {
           _id: { type: "string", example: "674a1b2c3d4e5f6789012350" },
           client: { $ref: "#/components/schemas/UserPublic" },
           provider: { $ref: "#/components/schemas/UserPublic" },
-          project: { type: "string", nullable: true, example: "674a1b2c3d4e5f6789012345" },
-          proposal: { type: "string", nullable: true, example: "674a1b2c3d4e5f6789012346" },
+          project: {
+            type: "string",
+            nullable: true,
+            example: "674a1b2c3d4e5f6789012345",
+          },
+          proposal: {
+            type: "string",
+            nullable: true,
+            example: "674a1b2c3d4e5f6789012346",
+          },
           service: { type: "string", nullable: true, example: null },
           price: { type: "number", example: 1500 },
           escrowAmount: { type: "number", example: 0 },
@@ -648,18 +905,38 @@ const swaggerDocument = {
         type: "object",
         required: ["providerId", "price"],
         properties: {
-          providerId: { type: "string", description: "Worker user MongoDB _id", example: "674a1b2c3d4e5f6789012346" },
+          providerId: {
+            type: "string",
+            description: "Worker user MongoDB _id",
+            example: "674a1b2c3d4e5f6789012346",
+          },
           price: { type: "number", minimum: 0, example: 1500 },
-          projectId: { type: "string", description: "Optional project ID", example: "674a1b2c3d4e5f6789012345" },
-          proposalId: { type: "string", description: "Optional proposal ID", example: "674a1b2c3d4e5f6789012346" },
-          serviceId: { type: "string", description: "Optional service ID", example: null },
+          projectId: {
+            type: "string",
+            description: "Optional project ID",
+            example: "674a1b2c3d4e5f6789012345",
+          },
+          proposalId: {
+            type: "string",
+            description: "Optional proposal ID",
+            example: "674a1b2c3d4e5f6789012346",
+          },
+          serviceId: {
+            type: "string",
+            description: "Optional service ID",
+            example: null,
+          },
         },
       },
       ResolveDisputeRequest: {
         type: "object",
         required: ["resolution"],
         properties: {
-          resolution: { type: "string", enum: ["refund", "release"], example: "refund" },
+          resolution: {
+            type: "string",
+            enum: ["refund", "release"],
+            example: "refund",
+          },
         },
       },
       AiAnalyzeRequest: {
@@ -677,7 +954,8 @@ const swaggerDocument = {
             minLength: 5,
             maxLength: 2000,
             example: "أريد دهان غرفة 4×5 متر وارتفاعها 3 متر",
-            description: "Natural language description of the task (Arabic or English)",
+            description:
+              "Natural language description of the task (Arabic or English)",
           },
         },
       },
@@ -701,7 +979,8 @@ const swaggerDocument = {
           estimatedArea: {
             type: "number",
             example: 54,
-            description: "Wall area (painting), floor area (ceramic), or bathroom area (plumbing) in m²",
+            description:
+              "Wall area (painting), floor area (ceramic), or bathroom area (plumbing) in m²",
           },
           laborHours: { type: "number", example: 8 },
           materials: {
@@ -787,7 +1066,10 @@ const swaggerDocument = {
                   type: "object",
                   properties: {
                     success: { type: "boolean", example: true },
-                    message: { type: "string", example: "Registered successfully" },
+                    message: {
+                      type: "string",
+                      example: "Registered successfully",
+                    },
                     data: { $ref: "#/components/schemas/AuthTokensData" },
                   },
                 },
@@ -820,7 +1102,10 @@ const swaggerDocument = {
                   type: "object",
                   properties: {
                     success: { type: "boolean", example: true },
-                    message: { type: "string", example: "Logged in successfully" },
+                    message: {
+                      type: "string",
+                      example: "Logged in successfully",
+                    },
                     data: { $ref: "#/components/schemas/AuthTokensData" },
                   },
                 },
@@ -874,7 +1159,8 @@ const swaggerDocument = {
       get: {
         tags: ["Auth"],
         summary: "Get current user",
-        description: "Returns user with populated `workerProfile` and `companyProfile` if set.",
+        description:
+          "Returns user with populated `workerProfile` and `companyProfile` if set.",
         security: [{ bearerAuth: [] }],
         responses: {
           200: {
@@ -949,7 +1235,10 @@ const swaggerDocument = {
                   type: "object",
                   properties: {
                     success: { type: "boolean", example: true },
-                    message: { type: "string", example: "Logged out from all devices" },
+                    message: {
+                      type: "string",
+                      example: "Logged out from all devices",
+                    },
                   },
                 },
               },
@@ -979,7 +1268,26 @@ const swaggerDocument = {
             description: "Filter by specialization",
             example: "سباكة",
           },
+          {
+            name: "lat",
+            in: "query",
+            schema: { type: "number" },
+            example: 30.0444,
+          },
+          {
+            name: "lng",
+            in: "query",
+            schema: { type: "number" },
+            example: 31.2357,
+          },
+          {
+            name: "radius",
+            in: "query",
+            schema: { type: "integer" },
+            description: "Max distance in meters (default 10000)",
+          },
         ],
+
         responses: {
           200: {
             description: "List of worker profiles",
@@ -1078,7 +1386,9 @@ const swaggerDocument = {
                       properties: {
                         profiles: {
                           type: "array",
-                          items: { $ref: "#/components/schemas/CompanyProfile" },
+                          items: {
+                            $ref: "#/components/schemas/CompanyProfile",
+                          },
                         },
                       },
                     },
@@ -1114,7 +1424,9 @@ const swaggerDocument = {
                     data: {
                       type: "object",
                       properties: {
-                        profile: { $ref: "#/components/schemas/CompanyProfile" },
+                        profile: {
+                          $ref: "#/components/schemas/CompanyProfile",
+                        },
                       },
                     },
                   },
@@ -1130,7 +1442,8 @@ const swaggerDocument = {
       post: {
         tags: ["Profiles - Worker (Me)"],
         summary: "Create my worker profile",
-        description: "Requires `worker` role. Send as **multipart/form-data** if uploading images.",
+        description:
+          "Requires `worker` role. Send as **multipart/form-data** if uploading images.",
         security: [{ bearerAuth: [] }],
         requestBody: {
           content: {
@@ -1148,7 +1461,10 @@ const swaggerDocument = {
                   type: "object",
                   properties: {
                     success: { type: "boolean", example: true },
-                    message: { type: "string", example: "Worker profile created" },
+                    message: {
+                      type: "string",
+                      example: "Worker profile created",
+                    },
                     data: {
                       type: "object",
                       properties: {
@@ -1214,7 +1530,10 @@ const swaggerDocument = {
                   type: "object",
                   properties: {
                     success: { type: "boolean", example: true },
-                    message: { type: "string", example: "Worker profile updated" },
+                    message: {
+                      type: "string",
+                      example: "Worker profile updated",
+                    },
                     data: {
                       type: "object",
                       properties: {
@@ -1263,7 +1582,10 @@ const swaggerDocument = {
                   type: "object",
                   properties: {
                     success: { type: "boolean", example: true },
-                    message: { type: "string", example: "Worker profile deleted" },
+                    message: {
+                      type: "string",
+                      example: "Worker profile deleted",
+                    },
                   },
                 },
               },
@@ -1279,7 +1601,8 @@ const swaggerDocument = {
       post: {
         tags: ["Profiles - Company (Me)"],
         summary: "Create my company profile",
-        description: "Requires `company` role. **multipart/form-data** for logo and project images.",
+        description:
+          "Requires `company` role. **multipart/form-data** for logo and project images.",
         security: [{ bearerAuth: [] }],
         requestBody: {
           content: {
@@ -1297,11 +1620,16 @@ const swaggerDocument = {
                   type: "object",
                   properties: {
                     success: { type: "boolean", example: true },
-                    message: { type: "string", example: "Company profile created" },
+                    message: {
+                      type: "string",
+                      example: "Company profile created",
+                    },
                     data: {
                       type: "object",
                       properties: {
-                        profile: { $ref: "#/components/schemas/CompanyProfile" },
+                        profile: {
+                          $ref: "#/components/schemas/CompanyProfile",
+                        },
                       },
                     },
                   },
@@ -1330,7 +1658,9 @@ const swaggerDocument = {
                     data: {
                       type: "object",
                       properties: {
-                        profile: { $ref: "#/components/schemas/CompanyProfile" },
+                        profile: {
+                          $ref: "#/components/schemas/CompanyProfile",
+                        },
                       },
                     },
                   },
@@ -1392,7 +1722,10 @@ const swaggerDocument = {
                   type: "object",
                   properties: {
                     success: { type: "boolean", example: true },
-                    message: { type: "string", example: "Company profile deleted" },
+                    message: {
+                      type: "string",
+                      example: "Company profile deleted",
+                    },
                   },
                 },
               },
@@ -1408,7 +1741,8 @@ const swaggerDocument = {
       get: {
         tags: ["Projects (Public)"],
         summary: "List all projects",
-        description: "No authentication required. Filter by status, city, or category.",
+        description:
+          "No authentication required. Returns **public** projects only (excludes direct/private projects sent to a specific worker). Filter by status, city, or category.",
         parameters: [
           {
             name: "status",
@@ -1459,7 +1793,8 @@ const swaggerDocument = {
       post: {
         tags: ["Projects (Client)"],
         summary: "Create a new project",
-        description: "Requires `user` role (Client).",
+        description:
+          "Requires `user` role (Client). When `workerId` is provided, the project is **direct/private** — visible only to the client and that worker, and excluded from public project listing.",
         security: [{ bearerAuth: [] }],
         requestBody: {
           required: true,
@@ -1496,10 +1831,68 @@ const swaggerDocument = {
         },
       },
     },
+    "/projects/assigned/me": {
+      get: {
+        tags: ["Projects (Worker)"],
+        summary: "List projects assigned to me",
+        description:
+          "Requires `worker` role. Returns projects where the client sent the project directly to this worker, " +
+          "including the worker's own proposal (`myProposal`) and a status summary. " +
+          "Filter by `status` query param.",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: "status",
+            in: "query",
+            schema: { type: "string", enum: ["open", "closed", "in-progress"] },
+            example: "open",
+          },
+        ],
+        responses: {
+          200: {
+            description: "Assigned projects for the authenticated worker",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    success: { type: "boolean", example: true },
+                    message: {
+                      type: "string",
+                      example: "Assigned projects fetched",
+                    },
+                    data: {
+                      type: "object",
+                      properties: {
+                        projects: {
+                          type: "array",
+                          items: {
+                            $ref: "#/components/schemas/AssignedProject",
+                          },
+                        },
+                        count: { type: "integer", example: 3 },
+                        summary: {
+                          $ref: "#/components/schemas/AssignedProjectSummary",
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          401: { $ref: "#/components/responses/Unauthorized" },
+          403: { $ref: "#/components/responses/Forbidden" },
+        },
+      },
+    },
     "/projects/{id}": {
       get: {
         tags: ["Projects (Public)"],
         summary: "Get project by ID",
+        description:
+          "Public projects are visible to everyone. **Direct/private** projects (with `worker` assigned) require authentication as the client or assigned worker.",
+        security: [{ bearerAuth: [] }, {}],
         parameters: [
           {
             name: "id",
@@ -1583,7 +1976,8 @@ const swaggerDocument = {
       delete: {
         tags: ["Projects (Client)"],
         summary: "Delete project",
-        description: "Requires `user` role. Only the project owner can delete. Also deletes all related proposals.",
+        description:
+          "Requires `user` role. Only the project owner can delete. Also deletes all related proposals.",
         security: [{ bearerAuth: [] }],
         parameters: [
           {
@@ -1616,9 +2010,11 @@ const swaggerDocument = {
     },
     "/projects/{id}/status": {
       patch: {
-        tags: ["Projects (Client)"],
+        tags: ["Projects (Client)", "Projects (Worker)"],
         summary: "Change project status",
-        description: "Requires `user` role. Only the project owner can change status.",
+        description:
+          "Requires `user` or `worker` role. The project owner (client) or the assigned worker can change status " +
+          "(e.g. worker moves project to `in-progress` when starting, or `closed` when done).",
         security: [{ bearerAuth: [] }],
         parameters: [
           {
@@ -1632,7 +2028,9 @@ const swaggerDocument = {
           required: true,
           content: {
             "application/json": {
-              schema: { $ref: "#/components/schemas/PatchProjectStatusRequest" },
+              schema: {
+                $ref: "#/components/schemas/PatchProjectStatusRequest",
+              },
             },
           },
         },
@@ -1645,7 +2043,10 @@ const swaggerDocument = {
                   type: "object",
                   properties: {
                     success: { type: "boolean", example: true },
-                    message: { type: "string", example: "Project status updated" },
+                    message: {
+                      type: "string",
+                      example: "Project status updated",
+                    },
                     data: {
                       type: "object",
                       properties: {
@@ -1668,7 +2069,8 @@ const swaggerDocument = {
       get: {
         tags: ["Proposals (Client)"],
         summary: "List proposals on a project",
-        description: "Requires `user` role. Only the project owner can view proposals.",
+        description:
+          "Requires `user` role. Only the project owner can view proposals.",
         security: [{ bearerAuth: [] }],
         parameters: [
           {
@@ -1711,7 +2113,8 @@ const swaggerDocument = {
       post: {
         tags: ["Proposals (Worker)"],
         summary: "Submit a proposal on a project",
-        description: "Requires `worker` role. Project must be `open`. One proposal per worker per project.",
+        description:
+          "Requires `worker` role. Project must be `open`. One proposal per worker per project.",
         security: [{ bearerAuth: [] }],
         parameters: [
           {
@@ -1764,7 +2167,8 @@ const swaggerDocument = {
       get: {
         tags: ["Proposals (Worker)"],
         summary: "Get my proposals",
-        description: "Requires `worker` role. Returns all proposals submitted by the authenticated worker.",
+        description:
+          "Requires `worker` role. Returns all proposals submitted by the authenticated worker.",
         security: [{ bearerAuth: [] }],
         responses: {
           200: {
@@ -1795,11 +2199,82 @@ const swaggerDocument = {
         },
       },
     },
+    "/proposals/my/history": {
+      get: {
+        tags: ["Proposals (Worker)"],
+        summary: "Get my full offer history",
+        description:
+          "Requires `worker` role. Returns a unified timeline of everything related to this worker: " +
+          "direct client requests (`direct_request` / `awaiting_proposal`), submitted proposals (`pending`), " +
+          "accepted, rejected, and withdrawn offers. Optional filters: `status`, `clientId`.",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: "status",
+            in: "query",
+            schema: {
+              type: "string",
+              enum: [
+                "awaiting_proposal",
+                "pending",
+                "accepted",
+                "rejected",
+                "withdrawn",
+              ],
+            },
+            example: "pending",
+          },
+          {
+            name: "clientId",
+            in: "query",
+            schema: { type: "string" },
+            description: "Filter history for a specific client User _id",
+          },
+        ],
+        responses: {
+          200: {
+            description: "Worker offer history",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    success: { type: "boolean", example: true },
+                    message: {
+                      type: "string",
+                      example: "Offer history fetched",
+                    },
+                    data: {
+                      type: "object",
+                      properties: {
+                        history: {
+                          type: "array",
+                          items: {
+                            $ref: "#/components/schemas/WorkerOfferHistoryItem",
+                          },
+                        },
+                        count: { type: "integer", example: 5 },
+                        summary: {
+                          $ref: "#/components/schemas/WorkerOfferHistorySummary",
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          401: { $ref: "#/components/responses/Unauthorized" },
+          403: { $ref: "#/components/responses/Forbidden" },
+        },
+      },
+    },
     "/proposals/{id}": {
       put: {
         tags: ["Proposals (Worker)"],
         summary: "Update my proposal",
-        description: "Requires `worker` role. Only pending proposals can be updated.",
+        description:
+          "Requires `worker` role. Only pending proposals can be updated.",
         security: [{ bearerAuth: [] }],
         parameters: [
           {
@@ -1849,7 +2324,8 @@ const swaggerDocument = {
       delete: {
         tags: ["Proposals (Worker)"],
         summary: "Withdraw my proposal",
-        description: "Requires `worker` role. Only pending proposals can be withdrawn.",
+        description:
+          "Requires `worker` role. Only pending proposals can be withdrawn.",
         security: [{ bearerAuth: [] }],
         parameters: [
           {
@@ -1902,7 +2378,9 @@ const swaggerDocument = {
           required: true,
           content: {
             "application/json": {
-              schema: { $ref: "#/components/schemas/PatchProposalStatusRequest" },
+              schema: {
+                $ref: "#/components/schemas/PatchProposalStatusRequest",
+              },
             },
           },
         },
@@ -1927,7 +2405,9 @@ const swaggerDocument = {
               },
             },
           },
-          400: { description: "Only pending proposals can be accepted or rejected" },
+          400: {
+            description: "Only pending proposals can be accepted or rejected",
+          },
           401: { $ref: "#/components/responses/Unauthorized" },
           403: { $ref: "#/components/responses/Forbidden" },
           404: { $ref: "#/components/responses/NotFound" },
@@ -1995,7 +2475,9 @@ const swaggerDocument = {
                     data: {
                       type: "object",
                       properties: {
-                        conversation: { $ref: "#/components/schemas/Conversation" },
+                        conversation: {
+                          $ref: "#/components/schemas/Conversation",
+                        },
                       },
                     },
                   },
@@ -2023,7 +2505,10 @@ const swaggerDocument = {
                   type: "object",
                   properties: {
                     success: { type: "boolean", example: true },
-                    message: { type: "string", example: "Conversations fetched" },
+                    message: {
+                      type: "string",
+                      example: "Conversations fetched",
+                    },
                     data: {
                       type: "object",
                       properties: {
@@ -2151,7 +2636,9 @@ const swaggerDocument = {
               },
             },
           },
-          400: { description: "Message content is required (for text messages)" },
+          400: {
+            description: "Message content is required (for text messages)",
+          },
           401: { $ref: "#/components/responses/Unauthorized" },
           403: { description: "Not a participant in this conversation" },
           404: { $ref: "#/components/responses/NotFound" },
@@ -2185,7 +2672,10 @@ const swaggerDocument = {
                   type: "object",
                   properties: {
                     success: { type: "boolean", example: true },
-                    message: { type: "string", example: "Messages marked as read" },
+                    message: {
+                      type: "string",
+                      example: "Messages marked as read",
+                    },
                     data: { type: "object", nullable: true, example: null },
                   },
                 },
@@ -2202,7 +2692,8 @@ const swaggerDocument = {
       get: {
         tags: ["Notifications"],
         summary: "Get my notifications",
-        description: "Returns paginated list of notifications for the authenticated user, sorted by newest first.",
+        description:
+          "Returns paginated list of notifications for the authenticated user, sorted by newest first.",
         security: [{ bearerAuth: [] }],
         parameters: [
           {
@@ -2227,7 +2718,10 @@ const swaggerDocument = {
                   type: "object",
                   properties: {
                     success: { type: "boolean", example: true },
-                    message: { type: "string", example: "Notifications fetched" },
+                    message: {
+                      type: "string",
+                      example: "Notifications fetched",
+                    },
                     data: {
                       type: "object",
                       properties: {
@@ -2260,7 +2754,8 @@ const swaggerDocument = {
       get: {
         tags: ["Notifications"],
         summary: "Get unread notifications count",
-        description: "Returns the total number of unread notifications for the authenticated user.",
+        description:
+          "Returns the total number of unread notifications for the authenticated user.",
         security: [{ bearerAuth: [] }],
         responses: {
           200: {
@@ -2271,7 +2766,10 @@ const swaggerDocument = {
                   type: "object",
                   properties: {
                     success: { type: "boolean", example: true },
-                    message: { type: "string", example: "Unread count fetched" },
+                    message: {
+                      type: "string",
+                      example: "Unread count fetched",
+                    },
                     data: {
                       type: "object",
                       properties: {
@@ -2291,7 +2789,8 @@ const swaggerDocument = {
       patch: {
         tags: ["Notifications"],
         summary: "Mark all notifications as read",
-        description: "Marks all unread notifications of the authenticated user as read.",
+        description:
+          "Marks all unread notifications of the authenticated user as read.",
         security: [{ bearerAuth: [] }],
         responses: {
           200: {
@@ -2302,7 +2801,10 @@ const swaggerDocument = {
                   type: "object",
                   properties: {
                     success: { type: "boolean", example: true },
-                    message: { type: "string", example: "All notifications marked as read" },
+                    message: {
+                      type: "string",
+                      example: "All notifications marked as read",
+                    },
                     data: { type: "object", nullable: true, example: null },
                   },
                 },
@@ -2317,7 +2819,8 @@ const swaggerDocument = {
       patch: {
         tags: ["Notifications"],
         summary: "Mark a single notification as read",
-        description: "Marks a specific notification of the authenticated user as read.",
+        description:
+          "Marks a specific notification of the authenticated user as read.",
         security: [{ bearerAuth: [] }],
         parameters: [
           {
@@ -2337,11 +2840,16 @@ const swaggerDocument = {
                   type: "object",
                   properties: {
                     success: { type: "boolean", example: true },
-                    message: { type: "string", example: "Notification marked as read" },
+                    message: {
+                      type: "string",
+                      example: "Notification marked as read",
+                    },
                     data: {
                       type: "object",
                       properties: {
-                        notification: { $ref: "#/components/schemas/Notification" },
+                        notification: {
+                          $ref: "#/components/schemas/Notification",
+                        },
                       },
                     },
                   },
@@ -2358,7 +2866,8 @@ const swaggerDocument = {
       delete: {
         tags: ["Notifications"],
         summary: "Delete a notification",
-        description: "Deletes a specific notification belonging to the authenticated user.",
+        description:
+          "Deletes a specific notification belonging to the authenticated user.",
         security: [{ bearerAuth: [] }],
         parameters: [
           {
@@ -2378,7 +2887,10 @@ const swaggerDocument = {
                   type: "object",
                   properties: {
                     success: { type: "boolean", example: true },
-                    message: { type: "string", example: "Notification deleted" },
+                    message: {
+                      type: "string",
+                      example: "Notification deleted",
+                    },
                     data: { type: "object", nullable: true, example: null },
                   },
                 },
@@ -2418,7 +2930,8 @@ const swaggerDocument = {
           },
           401: { $ref: "#/components/responses/Unauthorized" },
           403: {
-            description: "Forbidden — user is not authorized to subscribe to this channel",
+            description:
+              "Forbidden — user is not authorized to subscribe to this channel",
             content: {
               "application/json": {
                 schema: {
@@ -2437,7 +2950,8 @@ const swaggerDocument = {
       post: {
         tags: ["Bookings"],
         summary: "Create a booking (Agreement)",
-        description: "Requires `user` role. Creates a new booking in `pending_payment` status.",
+        description:
+          "Requires `user` role. Creates a new booking in `pending_payment` status.",
         security: [{ bearerAuth: [] }],
         requestBody: {
           required: true,
@@ -2476,14 +2990,38 @@ const swaggerDocument = {
       get: {
         tags: ["Bookings"],
         summary: "List my bookings",
-        description: "Returns a paginated list of bookings. For clients, returns bookings they created. For workers/companies, returns bookings assigned to them. For admins, returns all bookings.",
+        description:
+          "Returns a paginated list of bookings. For clients, returns bookings they created. For workers/companies, returns bookings assigned to them. For admins, returns all bookings.",
         security: [{ bearerAuth: [] }],
         parameters: [
-          { name: "page", in: "query", schema: { type: "integer", minimum: 1, default: 1 } },
-          { name: "limit", in: "query", schema: { type: "integer", minimum: 1, default: 20 } },
-          { name: "status", in: "query", schema: { type: "string" }, description: "Filter by status" },
-          { name: "clientId", in: "query", schema: { type: "string" }, description: "Filter by client ID (Admin only)" },
-          { name: "providerId", in: "query", schema: { type: "string" }, description: "Filter by provider ID (Admin only)" },
+          {
+            name: "page",
+            in: "query",
+            schema: { type: "integer", minimum: 1, default: 1 },
+          },
+          {
+            name: "limit",
+            in: "query",
+            schema: { type: "integer", minimum: 1, default: 20 },
+          },
+          {
+            name: "status",
+            in: "query",
+            schema: { type: "string" },
+            description: "Filter by status",
+          },
+          {
+            name: "clientId",
+            in: "query",
+            schema: { type: "string" },
+            description: "Filter by client ID (Admin only)",
+          },
+          {
+            name: "providerId",
+            in: "query",
+            schema: { type: "string" },
+            description: "Filter by provider ID (Admin only)",
+          },
         ],
         responses: {
           200: {
@@ -2526,7 +3064,8 @@ const swaggerDocument = {
       get: {
         tags: ["Bookings"],
         summary: "Get booking details by ID",
-        description: "Returns full details of a specific booking. Allowed for the client, the provider, or admin users.",
+        description:
+          "Returns full details of a specific booking. Allowed for the client, the provider, or admin users.",
         security: [{ bearerAuth: [] }],
         parameters: [
           {
@@ -2568,7 +3107,8 @@ const swaggerDocument = {
       post: {
         tags: ["Bookings"],
         summary: "Pay for a booking (Escrow deposit)",
-        description: "Requires `user` role. Charges the client, places the funds in platform escrow, and changes status to `paid`.",
+        description:
+          "Requires `user` role. Charges the client, places the funds in platform escrow, and changes status to `paid`.",
         security: [{ bearerAuth: [] }],
         parameters: [
           {
@@ -2610,7 +3150,8 @@ const swaggerDocument = {
       post: {
         tags: ["Bookings"],
         summary: "Deliver work (Mark as completed by provider)",
-        description: "Requires `worker` or `company` role. Changes the booking status to `delivered`.",
+        description:
+          "Requires `worker` or `company` role. Changes the booking status to `delivered`.",
         security: [{ bearerAuth: [] }],
         parameters: [
           {
@@ -2630,7 +3171,10 @@ const swaggerDocument = {
                   type: "object",
                   properties: {
                     success: { type: "boolean", example: true },
-                    message: { type: "string", example: "Work delivered successfully" },
+                    message: {
+                      type: "string",
+                      example: "Work delivered successfully",
+                    },
                     data: {
                       type: "object",
                       properties: {
@@ -2652,7 +3196,8 @@ const swaggerDocument = {
       post: {
         tags: ["Bookings"],
         summary: "Approve delivery (Release escrow funds)",
-        description: "Requires `user` role. Releases the escrowed funds to the provider's balance (minus the 10% platform commission) and sets status to `completed`.",
+        description:
+          "Requires `user` role. Releases the escrowed funds to the provider's balance (minus the 10% platform commission) and sets status to `completed`.",
         security: [{ bearerAuth: [] }],
         parameters: [
           {
@@ -2672,7 +3217,10 @@ const swaggerDocument = {
                   type: "object",
                   properties: {
                     success: { type: "boolean", example: true },
-                    message: { type: "string", example: "Delivery approved and funds released" },
+                    message: {
+                      type: "string",
+                      example: "Delivery approved and funds released",
+                    },
                     data: {
                       type: "object",
                       properties: {
@@ -2694,7 +3242,8 @@ const swaggerDocument = {
       post: {
         tags: ["Bookings"],
         summary: "Dispute booking delivery or progress",
-        description: "Allowed for client or provider. Sets the booking status to `disputed` for admin mediation.",
+        description:
+          "Allowed for client or provider. Sets the booking status to `disputed` for admin mediation.",
         security: [{ bearerAuth: [] }],
         parameters: [
           {
@@ -2714,7 +3263,10 @@ const swaggerDocument = {
                   type: "object",
                   properties: {
                     success: { type: "boolean", example: true },
-                    message: { type: "string", example: "Dispute opened successfully" },
+                    message: {
+                      type: "string",
+                      example: "Dispute opened successfully",
+                    },
                     data: {
                       type: "object",
                       properties: {
@@ -2726,7 +3278,10 @@ const swaggerDocument = {
               },
             },
           },
-          400: { description: "Dispute can only be opened for paid or delivered bookings" },
+          400: {
+            description:
+              "Dispute can only be opened for paid or delivered bookings",
+          },
           401: { $ref: "#/components/responses/Unauthorized" },
           403: { $ref: "#/components/responses/Forbidden" },
           404: { $ref: "#/components/responses/NotFound" },
@@ -2786,7 +3341,10 @@ const swaggerDocument = {
                   type: "object",
                   properties: {
                     success: { type: "boolean", example: true },
-                    message: { type: "string", example: "Estimation completed successfully" },
+                    message: {
+                      type: "string",
+                      example: "Estimation completed successfully",
+                    },
                     data: { $ref: "#/components/schemas/AiEstimationResult" },
                   },
                 },
@@ -2811,7 +3369,8 @@ const swaggerDocument = {
             },
           },
           422: {
-            description: "Validation failed or could not extract dimensions from description",
+            description:
+              "Validation failed or could not extract dimensions from description",
             content: {
               "application/json": {
                 schema: { $ref: "#/components/schemas/ErrorResponse" },
@@ -2819,7 +3378,8 @@ const swaggerDocument = {
             },
           },
           404: {
-            description: "Material price not found in database (run seed:materials first)",
+            description:
+              "Material price not found in database (run seed:materials first)",
             content: {
               "application/json": {
                 schema: { $ref: "#/components/schemas/ErrorResponse" },
@@ -2849,7 +3409,8 @@ const swaggerDocument = {
       post: {
         tags: ["Bookings"],
         summary: "Mediate and resolve dispute",
-        description: "Requires `admin` role. Resolves the dispute. If `refund`, releases escrow to client's balance. If `release`, releases escrow (after commission) to provider's balance.",
+        description:
+          "Requires `admin` role. Resolves the dispute. If `refund`, releases escrow to client's balance. If `release`, releases escrow (after commission) to provider's balance.",
         security: [{ bearerAuth: [] }],
         parameters: [
           {
@@ -2889,7 +3450,10 @@ const swaggerDocument = {
               },
             },
           },
-          400: { description: "Booking is not in disputed status or invalid resolution" },
+          400: {
+            description:
+              "Booking is not in disputed status or invalid resolution",
+          },
           401: { $ref: "#/components/responses/Unauthorized" },
           403: { $ref: "#/components/responses/Forbidden" },
           404: { $ref: "#/components/responses/NotFound" },

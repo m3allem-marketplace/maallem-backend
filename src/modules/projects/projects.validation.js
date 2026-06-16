@@ -15,6 +15,7 @@ const createProjectSchema = Joi.object({
   status: Joi.string()
     .valid(...PROJECT_STATUS_VALUES)
     .optional(),
+  workerId: Joi.string().hex().length(24).optional(),
 });
 
 const updateProjectSchema = Joi.object({

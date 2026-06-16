@@ -8,6 +8,7 @@ const {
 const {
   findProjectOrFail,
   assertOwner,
+  getWorkerIdFromProject,
 } = require("../projects/projects.service");
 const {
   notifyNewProposal,
@@ -43,8 +44,19 @@ const assertWorker = (proposal, userId) => {
 
 const createProposal = async (workerId, projectId, data) => {
   const project = await findProjectOrFail(projectId);
+  const assignedWorkerId = getWorkerIdFromProject(project);
 
-  if (project.status !== PROJECT_STATUS.OPEN) {
+  if (assignedWorkerId) {
+    if (assignedWorkerId !== workerId) {
+      throw new AppError("This project is assigned to another worker", 403);
+    }
+    if (
+      project.status !== PROJECT_STATUS.OPEN &&
+      project.status !== PROJECT_STATUS.IN_PROGRESS
+    ) {
+      throw new AppError("Proposals cannot be submitted on closed projects", 400);
+    }
+  } else if (project.status !== PROJECT_STATUS.OPEN) {
     throw new AppError("Proposals can only be submitted on open projects", 400);
   }
 
@@ -106,6 +118,130 @@ const listMyProposals = async (workerId) => {
       populate: { path: "client", select: USER_PUBLIC_FIELDS },
     })
     .sort({ createdAt: -1 });
+};
+
+const PROJECT_WITH_CLIENT = {
+  path: "project",
+  populate: [
+    { path: "client", select: USER_PUBLIC_FIELDS },
+    { path: "worker", select: USER_PUBLIC_FIELDS },
+  ],
+};
+
+const formatHistoryProject = (project) => ({
+  _id: project._id,
+  title: project.title,
+  description: project.description,
+  category: project.category,
+  budget: project.budget,
+  status: project.status,
+  location: project.location,
+  isDirect: Boolean(project.worker),
+  createdAt: project.createdAt,
+  updatedAt: project.updatedAt,
+});
+
+const formatHistoryProposal = (proposal) => ({
+  _id: proposal._id,
+  price: proposal.price,
+  message: proposal.message,
+  status: proposal.status,
+  estimatedDuration: proposal.estimatedDuration,
+  createdAt: proposal.createdAt,
+  updatedAt: proposal.updatedAt,
+});
+
+const matchesHistoryStatus = (status, filter) => {
+  if (!filter) return true;
+  return status === filter;
+};
+
+const getWorkerOfferHistory = async (workerId, query = {}) => {
+  const proposals = await Proposal.find({ worker: workerId })
+    .populate(PROJECT_WITH_CLIENT)
+    .sort({ updatedAt: -1 });
+
+  const proposalByProjectId = new Map(
+    proposals.map((p) => [p.project._id.toString(), p]),
+  );
+
+  const directFilter = { worker: workerId };
+  if (query.clientId) directFilter.client = query.clientId;
+
+  const directProjects = await Project.find(directFilter)
+    .populate("client", USER_PUBLIC_FIELDS)
+    .populate("worker", USER_PUBLIC_FIELDS)
+    .sort({ createdAt: -1 });
+
+  const history = [];
+
+  for (const project of directProjects) {
+    const existingProposal = proposalByProjectId.get(project._id.toString());
+    if (existingProposal) continue;
+
+    const item = {
+      id: project._id,
+      kind: "direct_request",
+      status: "awaiting_proposal",
+      isDirect: true,
+      client: project.client,
+      project: formatHistoryProject(project),
+      proposal: null,
+      createdAt: project.createdAt,
+      updatedAt: project.updatedAt,
+    };
+
+    if (matchesHistoryStatus(item.status, query.status)) {
+      history.push(item);
+    }
+  }
+
+  for (const proposal of proposals) {
+    const project = proposal.project;
+
+    if (query.clientId) {
+      const clientId =
+        project.client._id?.toString() ?? project.client.toString();
+      if (clientId !== query.clientId) continue;
+    }
+
+    const item = {
+      id: proposal._id,
+      kind: "proposal",
+      status: proposal.status,
+      isDirect: Boolean(project.worker),
+      client: project.client,
+      project: formatHistoryProject(project),
+      proposal: formatHistoryProposal(proposal),
+      createdAt: proposal.createdAt,
+      updatedAt: proposal.updatedAt,
+    };
+
+    if (matchesHistoryStatus(item.status, query.status)) {
+      history.push(item);
+    }
+  }
+
+  history.sort(
+    (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+  );
+
+  return {
+    history,
+    count: history.length,
+    summary: {
+      total: history.length,
+      awaitingProposal: history.filter((h) => h.status === "awaiting_proposal")
+        .length,
+      pending: history.filter((h) => h.status === PROPOSAL_STATUS.PENDING).length,
+      accepted: history.filter((h) => h.status === PROPOSAL_STATUS.ACCEPTED)
+        .length,
+      rejected: history.filter((h) => h.status === PROPOSAL_STATUS.REJECTED)
+        .length,
+      withdrawn: history.filter((h) => h.status === PROPOSAL_STATUS.WITHDRAWN)
+        .length,
+    },
+  };
 };
 
 // ─── Update ───────────────────────────────────────────────────────────────────
@@ -201,6 +337,7 @@ module.exports = {
   createProposal,
   listProposalsByProject,
   listMyProposals,
+  getWorkerOfferHistory,
   updateProposal,
   deleteProposal,
   updateProposalStatus,

@@ -15,6 +15,17 @@ const workerProfileSchema = new mongoose.Schema(
     location: {
       address: { type: String, trim: true, default: "" },
       city: { type: String, trim: true, default: "" },
+      coordinates: {
+        type: {
+          type: String,
+          enum: ["Point"],
+          default: "Point",
+        },
+        coordinates: {
+          type: [Number], // [longitude, latitude]
+          default: undefined,
+        },
+      },
     },
     phone: { type: String, trim: true, default: "" },
     portfolioImages: [{ type: String }],
@@ -25,6 +36,7 @@ const workerProfileSchema = new mongoose.Schema(
 
 workerProfileSchema.index({ "location.city": 1 });
 workerProfileSchema.index({ specializations: 1 });
+workerProfileSchema.index({ "location.coordinates": "2dsphere" }); // للبحث الجغرافي
 
 workerProfileSchema.methods.checkComplete = function () {
   return Boolean(

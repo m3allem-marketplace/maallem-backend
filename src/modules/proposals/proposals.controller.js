@@ -40,6 +40,14 @@ const listMy = catchAsync(async (req, res) => {
   sendResponse(res, 200, { proposals }, "Proposals fetched");
 });
 
+const listMyHistory = catchAsync(async (req, res) => {
+  const result = await proposalsService.getWorkerOfferHistory(
+    req.user.id,
+    req.query,
+  );
+  sendResponse(res, 200, result, "Offer history fetched");
+});
+
 const update = catchAsync(async (req, res) => {
   const data = validate(updateProposalSchema, req.body);
   const proposal = await proposalsService.updateProposal(
@@ -65,4 +73,12 @@ const patchStatus = catchAsync(async (req, res) => {
   sendResponse(res, 200, { proposal }, `Proposal ${status}`);
 });
 
-module.exports = { create, listByProject, listMy, update, remove, patchStatus };
+module.exports = {
+  create,
+  listByProject,
+  listMy,
+  listMyHistory,
+  update,
+  remove,
+  patchStatus,
+};

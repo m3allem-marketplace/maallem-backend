@@ -17,6 +17,7 @@ const notificationSchema = new mongoose.Schema(
         "payment_received",
         "new_review",
         "booking_status_changed",
+        "project_invitation",
       ],
       required: true,
     },

@@ -3,6 +3,10 @@ const Joi = require("joi");
 const locationSchema = Joi.object({
   address: Joi.string().max(300).allow(""),
   city: Joi.string().max(100).allow(""),
+  coordinates: Joi.object({
+    type: Joi.string().valid("Point").default("Point"),
+    coordinates: Joi.array().items(Joi.number()).length(2).optional(),
+  }).optional(),
 });
 
 const parseJsonField = (value) => {
@@ -71,6 +75,16 @@ const normalizeLocation = (location) => {
   if (!location) return undefined;
   if (typeof location === "string") {
     return { address: location, city: "" };
+  }
+  if (location.lng !== undefined && location.lat !== undefined) {
+    return {
+      address: location.address || "",
+      city: location.city || "",
+      coordinates: {
+        type: "Point",
+        coordinates: [parseFloat(location.lng), parseFloat(location.lat)],
+      },
+    };
   }
   return location;
 };
