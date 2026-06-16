@@ -19,7 +19,8 @@ const notificationsRoutes = require("./src/modules/notifications/notifications.r
 const bookingsRoutes = require("./src/modules/bookings/bookings.routes");
 const aiRoutes = require("./src/modules/ai/ai.routes");
 const { protect } = require("./src/modules/auth/auth.middleware");
-const pusher = require("./src/config/pusher");
+const catchAsync = require("./src/utils/catchAsync");
+const { authorizePusherChannel } = require("./src/modules/chat/pusher.auth");
 
 
 
@@ -42,44 +43,24 @@ app.use(
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-app.post("/api/v1/pusher/auth", protect, async (req, res) => {
-  const { socket_id, channel_name } = req.body;
-
-  // only allow participants to subscribe to their own channels
-  const userId = req.user.id;
-
-  // allow user notification channel
-  if (channel_name === `private-user-${userId}`) {
-    const auth = pusher.authorizeChannel(socket_id, channel_name);
-    return res.json(auth);
-  }
-
-  // allow conversation channel — backend will verify participation
-  if (channel_name.startsWith("private-conversation-")) {
-  const conversationId = channel_name.replace("private-conversation-", "");
-  
-  // inline async handler since catchAsync isn't used here
-  try {
-    const { Conversation } = require("./src/modules/chat/chat.model");
-    const conversation = await Conversation.findById(conversationId);
+app.post(
+  "/api/v1/pusher/auth",
+  protect,
+  catchAsync(async (req, res) => {
+    const { socket_id, channel_name } = req.body;
     
-    if (!conversation) return res.status(404).json({ message: "Conversation not found" });
+    // ✅ FIX: Safely grab the ID whether it's _id or id, and force it to a string
+    const userId = req.user._id || req.user.id;
+    if (!userId) throw new Error("User ID missing from token payload");
 
-    const isParticipant =
-      conversation.client.toString() === userId ||
-      conversation.worker.toString() === userId;
-
-    if (!isParticipant) return res.status(403).json({ message: "Forbidden" });
-
-    const auth = pusher.authorizeChannel(socket_id, channel_name);
-    return res.json(auth);
-  } catch (err) {
-    return res.status(500).json({ message: "Auth error" });
-  }
-}
-
-  return res.status(403).json({ message: "Forbidden" });
-});
+    const auth = await authorizePusherChannel(
+      userId.toString(), // Safely convert to string here
+      socket_id,
+      channel_name
+    );
+    res.json(auth);
+  }),
+);
 
 // ─── Rate Limiting ────────────────────────────────────────────────────────────
 const limiter = rateLimit({

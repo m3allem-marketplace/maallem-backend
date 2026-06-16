@@ -1,15 +1,13 @@
 const Project = require("./projects.model");
 const Proposal = require("../proposals/proposals.model");
 const { PROJECT_STATUS } = require("../../constants/status");
-const AppError = require("../../utils/AppError"); // ✅ add this
-// ❌ remove sendResponse — it's not used in the service
-
+const AppError = require("../../utils/AppError");
 
 const USER_PUBLIC_FIELDS = "name email role phone";
 
 const findProjectOrFail = async (id) => {
   const project = await Project.findById(id).populate(
-    "client",
+    "user",
     USER_PUBLIC_FIELDS,
   );
   if (!project) {
@@ -19,7 +17,7 @@ const findProjectOrFail = async (id) => {
 };
 
 const assertOwner = (project, userId) => {
-  if (project.client._id?.toString() !== userId && project.client.toString() !== userId) {
+  if (project.user._id?.toString() !== userId && project.user.toString() !== userId) {
     throw new AppError("You can only manage your own projects", 403);
   }
 };
@@ -31,7 +29,7 @@ const listProjects = async (query = {}) => {
   if (query.category) filter.category = new RegExp(query.category, "i");
 
   return Project.find(filter)
-    .populate("client", USER_PUBLIC_FIELDS)
+    .populate("user", USER_PUBLIC_FIELDS)
     .sort({ createdAt: -1 });
 };
 
@@ -39,7 +37,7 @@ const getProjectById = async (id) => findProjectOrFail(id);
 
 const createProject = async (userId, data) => {
   const project = await Project.create({
-    client: userId,
+    user: userId,
     title: data.title,
     description: data.description || "",
     category: data.category || "",
@@ -48,7 +46,7 @@ const createProject = async (userId, data) => {
     status: data.status || PROJECT_STATUS.OPEN,
   });
 
-  return project.populate("client", USER_PUBLIC_FIELDS);
+  return project.populate("user", USER_PUBLIC_FIELDS);
 };
 
 const updateProject = async (userId, id, data) => {
@@ -62,7 +60,7 @@ const updateProject = async (userId, id, data) => {
   if (data.budget !== undefined) project.budget = data.budget;
 
   await project.save();
-  return project.populate("client", USER_PUBLIC_FIELDS);
+  return project.populate("user", USER_PUBLIC_FIELDS);
 };
 
 const deleteProject = async (userId, id) => {
@@ -80,7 +78,7 @@ const updateProjectStatus = async (userId, id, status) => {
   assertOwner(project, userId);
   project.status = status;
   await project.save();
-  return project.populate("client", USER_PUBLIC_FIELDS);
+  return project.populate("user", USER_PUBLIC_FIELDS);
 };
 
 module.exports = {

@@ -6,7 +6,6 @@ const { upload } = require("../../middlewares/upload");
 
 // all chat routes require authentication
 router.use(protect);
-router.post("/pusher/auth", chatController.authenticatePusher);
 
 // ─── Conversations ────────────────────────────────────────────────────────────
 

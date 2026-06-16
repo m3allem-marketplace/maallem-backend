@@ -24,7 +24,7 @@ const findProposalOrFail = async (id) => {
     .populate("worker", USER_PUBLIC_FIELDS)
     .populate({
       path: "project",
-      populate: { path: "client", select: USER_PUBLIC_FIELDS },
+      populate: { path: "user", select: USER_PUBLIC_FIELDS },
     });
 
   if (!proposal) throw new AppError("Proposal not found", 404);
@@ -73,12 +73,12 @@ const createProposal = async (workerId, projectId, data) => {
   await proposal.populate("worker", USER_PUBLIC_FIELDS);
   await proposal.populate({
     path: "project",
-    populate: { path: "client", select: USER_PUBLIC_FIELDS },
+    populate: { path: "user", select: USER_PUBLIC_FIELDS },
   });
 
-  // notify client about new proposal — non-blocking
+  // notify project owner about new proposal — non-blocking
   notifyNewProposal(
-    proposal.project.client._id,
+    proposal.project.user._id,
     proposal.worker.name,
     proposal.project.title,
     projectId,
@@ -90,9 +90,9 @@ const createProposal = async (workerId, projectId, data) => {
 
 // ─── List ─────────────────────────────────────────────────────────────────────
 
-const listProposalsByProject = async (clientId, projectId) => {
+const listProposalsByProject = async (userId, projectId) => {
   const project = await findProjectOrFail(projectId);
-  assertOwner(project, clientId);
+  assertOwner(project, userId);
 
   return Proposal.find({ project: projectId })
     .populate("worker", USER_PUBLIC_FIELDS)
@@ -103,7 +103,7 @@ const listMyProposals = async (workerId) => {
   return Proposal.find({ worker: workerId })
     .populate({
       path: "project",
-      populate: { path: "client", select: USER_PUBLIC_FIELDS },
+      populate: { path: "user", select: USER_PUBLIC_FIELDS },
     })
     .sort({ createdAt: -1 });
 };
@@ -147,11 +147,11 @@ const deleteProposal = async (workerId, id) => {
 
 // ─── Update status (accept / reject) ─────────────────────────────────────────
 
-const updateProposalStatus = async (clientId, id, status) => {
+const updateProposalStatus = async (userId, id, status) => {
   const proposal = await findProposalOrFail(id);
   const project = proposal.project;
 
-  assertOwner(project, clientId);
+  assertOwner(project, userId);
 
   if (proposal.status !== PROPOSAL_STATUS.PENDING) {
     throw new AppError("Only pending proposals can be accepted or rejected", 400);
