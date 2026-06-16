@@ -177,6 +177,18 @@ const notifyBookingStatusChanged = async (clientId, status, bookingId) => {
   } catch (err) { console.error("notifyBookingStatusChanged error:", err.message); }
 };
 
+const notifyProjectInvitation = async (workerId, clientName, projectTitle, projectId) => {
+  try {
+    return await createNotification({
+      recipient: workerId,
+      type: "project_invitation",
+      title: "New Project Request",
+      message: `${clientName} sent you a project "${projectTitle}"`,
+      data: { projectId },
+    });
+  } catch (err) { console.error("notifyProjectInvitation error:", err.message); }
+};
+
 module.exports = {
   createNotification,
   getMyNotifications,
@@ -191,4 +203,5 @@ module.exports = {
   notifyPaymentReceived,
   notifyNewReview,
   notifyBookingStatusChanged,
+  notifyProjectInvitation,
 };

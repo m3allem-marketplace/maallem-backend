@@ -9,6 +9,12 @@ const projectSchema = new mongoose.Schema(
       required: true,
       index: true,
     },
+    worker: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+      index: true,
+    },
     title: { type: String, required: true, trim: true, maxlength: 200 },
     description: { type: String, trim: true, maxlength: 5000, default: "" },
     category: { type: String, trim: true, maxlength: 100, default: "" },
