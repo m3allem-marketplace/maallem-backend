@@ -22,8 +22,6 @@ const { protect } = require("./src/modules/auth/auth.middleware");
 const catchAsync = require("./src/utils/catchAsync");
 const { authorizePusherChannel } = require("./src/modules/chat/pusher.auth");
 
-
-
 const app = express();
 app.set("trust proxy", 1);
 
@@ -65,6 +63,18 @@ app.post("/api/v1/pusher/auth", protect, (req, res) => {
   return res.status(403).json({ message: "Forbidden" });
 });
 
+const pusherAuthHandler = catchAsync(async (req, res) => {
+  const { socket_id, channel_name } = req.body;
+  const auth = await authorizePusherChannel(
+    req.user.id,
+    socket_id,
+    channel_name,
+  );
+  res.json(auth);
+});
+
+app.post("/api/v1/pusher/auth", protect, pusherAuthHandler); 
+app.post("/api/pusher/auth", protect, pusherAuthHandler);
 // ─── Rate Limiting ────────────────────────────────────────────────────────────
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 دقيقة
