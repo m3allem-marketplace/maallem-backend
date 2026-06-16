@@ -6,11 +6,7 @@ const { CHAT_EVENTS, CHAT_CHANNELS } = require("../../constants/events");
 const { notifyNewMessage } = require("../notifications/notifications.service");
 
 // ─── Start or get existing conversation ──────────────────────────────────────
-const getOrCreateConversation = async (
-  clientId,
-  workerId,
-  projectId = null,
-) => {
+const getOrCreateConversation = async (clientId, workerId, projectId = null) => {
   let conversation = await Conversation.findOne({
     client: clientId,
     worker: workerId,
@@ -37,8 +33,7 @@ const getOrCreateConversation = async (
 
 // ─── Get my conversations ─────────────────────────────────────────────────────
 const getMyConversations = async (userId, userRole) => {
-  const filter =
-    userRole === "worker" ? { worker: userId } : { client: userId };
+  const filter = userRole === "worker" ? { worker: userId } : { client: userId };
 
   return Conversation.find(filter)
     .populate("client", "name email")
@@ -57,10 +52,7 @@ const getMessages = async (conversationId, userId, page = 1, limit = 30) => {
     conversation.worker.toString() === userId;
 
   if (!isParticipant) {
-    throw new AppError(
-      "Access denied. You are not part of this conversation",
-      403,
-    );
+    throw new AppError("Access denied. You are not part of this conversation", 403);
   }
 
   const skip = (page - 1) * limit;
@@ -86,13 +78,7 @@ const getMessages = async (conversationId, userId, page = 1, limit = 30) => {
 };
 
 // ─── Send a message ───────────────────────────────────────────────────────────
-const sendMessage = async (
-  conversationId,
-  senderId,
-  senderRole,
-  body,
-  file,
-) => {
+const sendMessage = async (conversationId, senderId, senderRole, body, file) => {
   const conversation = await Conversation.findById(conversationId);
   if (!conversation) throw new AppError("Conversation not found", 404);
 
@@ -101,10 +87,7 @@ const sendMessage = async (
     conversation.worker.toString() === senderId;
 
   if (!isParticipant) {
-    throw new AppError(
-      "Access denied. You are not part of this conversation",
-      403,
-    );
+    throw new AppError("Access denied. You are not part of this conversation", 403);
   }
 
   let type = "text";
@@ -152,13 +135,13 @@ const sendMessage = async (
 
   // FIX 4: flat field names matching updated model
   const isClient = conversation.client.toString() === senderId;
-  const unreadField = isClient ? "unreadCount.worker" : "unreadCount.client";
+  const unreadField = isClient ? "unreadCountWorker" : "unreadCountClient";
   const recipientId = isClient ? conversation.worker : conversation.client;
 
   await Conversation.findByIdAndUpdate(conversationId, {
     lastMessage: message._id,
     lastMessageAt: new Date(),
-    $inc: { [unreadField]: 1 }, 
+    $inc: { [unreadField]: 1 },
   });
 
   // Pusher — non-blocking
@@ -173,9 +156,11 @@ const sendMessage = async (
   }
 
   // FIX 3: use named import directly, fire-and-forget
-  notifyNewMessage(recipientId, senderName, conversationId).catch((err) =>
-    console.error("Notification error:", err.message),
-  );
+  notifyNewMessage(
+    recipientId,
+    senderName,
+    conversationId,
+  ).catch((err) => console.error("Notification error:", err.message));
 
   return message;
 };
@@ -190,10 +175,7 @@ const markAsRead = async (conversationId, userId, userRole) => {
     conversation.worker.toString() === userId;
 
   if (!isParticipant) {
-    throw new AppError(
-      "Access denied. You are not part of this conversation",
-      403,
-    );
+    throw new AppError("Access denied. You are not part of this conversation", 403);
   }
 
   await Message.updateMany(
@@ -202,7 +184,8 @@ const markAsRead = async (conversationId, userId, userRole) => {
   );
 
   // FIX 4: flat field names
-const unreadField = userRole === "user" ? "unreadCount.client" : "unreadCount.worker";
+  const unreadField = userRole === "user" ? "unreadCountClient" : "unreadCountWorker";
+
   await Conversation.findByIdAndUpdate(conversationId, {
     [unreadField]: 0,
   });

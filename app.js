@@ -43,24 +43,27 @@ app.use(
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-app.post(
-  "/api/v1/pusher/auth",
-  protect,
-  catchAsync(async (req, res) => {
-    const { socket_id, channel_name } = req.body;
-    
-    // ✅ FIX: Safely grab the ID whether it's _id or id, and force it to a string
-    const userId = req.user._id || req.user.id;
-    if (!userId) throw new Error("User ID missing from token payload");
+app.post("/api/v1/pusher/auth", protect, (req, res) => {
+  const { socket_id, channel_name } = req.body;
 
-    const auth = await authorizePusherChannel(
-      userId.toString(), // Safely convert to string here
-      socket_id,
-      channel_name
-    );
-    res.json(auth);
-  }),
-);
+  // only allow participants to subscribe to their own channels
+  // private-conversation-{id} and private-user-{userId}
+  const userId = req.user.id;
+
+  // allow user notification channel
+  if (channel_name === `private-user-${userId}`) {
+    const auth = pusher.authorizeChannel(socket_id, channel_name);
+    return res.json(auth);
+  }
+
+  // allow conversation channel — backend will verify participation
+  if (channel_name.startsWith("private-conversation-")) {
+    const auth = pusher.authorizeChannel(socket_id, channel_name);
+    return res.json(auth);
+  }
+
+  return res.status(403).json({ message: "Forbidden" });
+});
 
 // ─── Rate Limiting ────────────────────────────────────────────────────────────
 const limiter = rateLimit({
