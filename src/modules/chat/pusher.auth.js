@@ -16,7 +16,7 @@ const authorizePusherChannel = async (userId, socketId, channelName) => {
     }
 
     const isParticipant =
-      conversation.user.toString() === userId ||
+      conversation.client.toString() === userId || 
       conversation.worker.toString() === userId;
 
     if (!isParticipant) {
