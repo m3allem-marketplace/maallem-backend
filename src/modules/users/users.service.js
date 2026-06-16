@@ -21,7 +21,7 @@ const getClientDashboard = async (userId) => {
   }
 
   const [projects, conversations] = await Promise.all([
-    Project.find({ user: userId }).sort({ createdAt: -1 }),
+    Project.find({ client: userId }).sort({ createdAt: -1 }),
     chatService.getMyConversations(userId, "user"),
   ]);
 
@@ -95,7 +95,7 @@ const getClientDashboard = async (userId) => {
     },
     pendingProposals: pendingProposals.length,
     unreadMessages: conversations.reduce(
-      (sum, c) => sum + (c.unreadCount?.user || 0),
+      (sum, c) => sum + (c.unreadCount?.client || 0),
       0,
     ),
   };

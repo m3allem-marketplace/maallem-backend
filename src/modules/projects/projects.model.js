@@ -3,7 +3,7 @@ const { PROJECT_STATUS, PROJECT_STATUS_VALUES } = require("../../constants/statu
 
 const projectSchema = new mongoose.Schema(
   {
-    user: {
+    client: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,

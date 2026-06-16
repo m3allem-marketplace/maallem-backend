@@ -55,7 +55,7 @@ const swaggerDocument = {
       "**Projects:** Clients (`user` role) post and manage projects. Public listing and details.\n\n" +
       "**Proposals:** Workers submit proposals on open projects. Clients accept/reject proposals.\n\n" +
       "**Chat:** Clients start conversations with workers; both can list conversations, send/receive messages (text, image, or file), and mark messages as read.\n\n" +
-      "**Users (Dashboard):** Single private endpoint aggregating the user's projects, pending proposals, conversations, and summary stats.\n\n" +
+      "**Users (Client Dashboard):** Single private endpoint aggregating the client's projects, pending proposals, conversations, and summary stats.\n\n" +
       "**AI Estimation:** Analyze a natural-language task description (Arabic/English), extract dimensions via OpenAI, then compute quantities and pricing using a rule engine and internal material prices (no supplier contact).",
     contact: {
       name: "Maallem Team",
@@ -294,7 +294,7 @@ const swaggerDocument = {
         type: "object",
         properties: {
           _id: { type: "string", example: "674a1b2c3d4e5f6789012345" },
-          user: { $ref: "#/components/schemas/UserPublic" },
+          client: { $ref: "#/components/schemas/UserPublic" },
           title: { type: "string", example: "تصليح سباكة" },
           description: { type: "string", example: "تسريب في الحمام يحتاج إصلاح عاجل" },
           category: { type: "string", example: "plumbing" },
@@ -399,7 +399,7 @@ const swaggerDocument = {
         type: "object",
         properties: {
           _id: { type: "string", example: "674a1b2c3d4e5f6789012347" },
-          user: { $ref: "#/components/schemas/UserPublic" },
+          client: { $ref: "#/components/schemas/UserPublic" },
           worker: { $ref: "#/components/schemas/UserPublic" },
           project: {
             type: "string",
@@ -412,7 +412,7 @@ const swaggerDocument = {
           unreadCount: {
             type: "object",
             properties: {
-              user: { type: "integer", example: 0 },
+              client: { type: "integer", example: 0 },
               worker: { type: "integer", example: 2 },
             },
           },
@@ -467,7 +467,7 @@ const swaggerDocument = {
           pendingProposals: {
             type: "integer",
             example: 3,
-            description: "Proposals awaiting user accept/reject",
+            description: "Proposals awaiting client accept/reject",
           },
           unreadMessages: { type: "integer", example: 2 },
         },
@@ -1938,9 +1938,9 @@ const swaggerDocument = {
     "/users/me/dashboard": {
       get: {
         tags: ["Users (Client)"],
-        summary: "Get user dashboard",
+        summary: "Get client dashboard",
         description:
-          "Requires `user` role. **Private** — returns all data for the authenticated user in one response: " +
+          "Requires `user` role. **Private** — returns all data for the authenticated client in one response: " +
           "profile, project stats, projects with nested proposals (pending + accepted), " +
           "a flat list of pending proposals needing action, and chat conversations with unread counts.",
         security: [{ bearerAuth: [] }],
@@ -1972,7 +1972,7 @@ const swaggerDocument = {
         summary: "Start or get a conversation",
         description:
           "Requires `user` role. Returns an existing conversation with the worker or creates a new one. " +
-          "One conversation per user–worker–project combination.",
+          "One conversation per client–worker pair.",
         security: [{ bearerAuth: [] }],
         requestBody: {
           required: true,
