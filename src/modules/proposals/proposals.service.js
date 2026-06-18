@@ -1,10 +1,7 @@
 const Proposal = require("./proposals.model");
 const Project = require("../projects/projects.model");
 const AppError = require("../../utils/AppError");
-const {
-  PROJECT_STATUS,
-  PROPOSAL_STATUS,
-} = require("../../constants/status");
+const { PROJECT_STATUS, PROPOSAL_STATUS } = require("../../constants/status");
 const {
   findProjectOrFail,
   assertOwner,
@@ -34,7 +31,8 @@ const findProposalOrFail = async (id) => {
 
 const assertWorker = (proposal, userId) => {
   // safe whether worker is populated object or raw ObjectId
-  const workerId = proposal.worker._id?.toString() ?? proposal.worker.toString();
+  const workerId =
+    proposal.worker._id?.toString() ?? proposal.worker.toString();
   if (workerId !== userId) {
     throw new AppError("You can only manage your own proposals", 403);
   }
@@ -54,15 +52,24 @@ const createProposal = async (workerId, projectId, data) => {
       project.status !== PROJECT_STATUS.OPEN &&
       project.status !== PROJECT_STATUS.IN_PROGRESS
     ) {
-      throw new AppError("Proposals cannot be submitted on closed projects", 400);
+      throw new AppError(
+        "Proposals cannot be submitted on closed projects",
+        400,
+      );
     }
   } else if (project.status !== PROJECT_STATUS.OPEN) {
     throw new AppError("Proposals can only be submitted on open projects", 400);
   }
 
-  const existing = await Proposal.findOne({ project: projectId, worker: workerId });
+  const existing = await Proposal.findOne({
+    project: projectId,
+    worker: workerId,
+  });
   if (existing) {
-    throw new AppError("You already submitted a proposal for this project", 409);
+    throw new AppError(
+      "You already submitted a proposal for this project",
+      409,
+    );
   }
 
   let proposal;
@@ -77,7 +84,10 @@ const createProposal = async (workerId, projectId, data) => {
   } catch (err) {
     // double safety for race condition on unique index
     if (err.code === 11000) {
-      throw new AppError("You already submitted a proposal for this project", 409);
+      throw new AppError(
+        "You already submitted a proposal for this project",
+        409,
+      );
     }
     throw err;
   }
@@ -233,7 +243,8 @@ const getWorkerOfferHistory = async (workerId, query = {}) => {
       total: history.length,
       awaitingProposal: history.filter((h) => h.status === "awaiting_proposal")
         .length,
-      pending: history.filter((h) => h.status === PROPOSAL_STATUS.PENDING).length,
+      pending: history.filter((h) => h.status === PROPOSAL_STATUS.PENDING)
+        .length,
       accepted: history.filter((h) => h.status === PROPOSAL_STATUS.ACCEPTED)
         .length,
       rejected: history.filter((h) => h.status === PROPOSAL_STATUS.REJECTED)
@@ -290,7 +301,10 @@ const updateProposalStatus = async (clientId, id, status) => {
   assertOwner(project, clientId);
 
   if (proposal.status !== PROPOSAL_STATUS.PENDING) {
-    throw new AppError("Only pending proposals can be accepted or rejected", 400);
+    throw new AppError(
+      "Only pending proposals can be accepted or rejected",
+      400,
+    );
   }
 
   proposal.status = status;
@@ -301,7 +315,11 @@ const updateProposalStatus = async (clientId, id, status) => {
     await Project.findByIdAndUpdate(project._id, {
       status: PROJECT_STATUS.IN_PROGRESS,
     });
-
+    const otherProposals = await Proposal.find({
+      project: project._id,
+      _id: { $ne: proposal._id },
+      status: PROPOSAL_STATUS.PENDING,
+    }).populate("worker", "_id");
     // reject all other pending proposals
     await Proposal.updateMany(
       {
@@ -319,7 +337,6 @@ const updateProposalStatus = async (clientId, id, status) => {
       project._id,
       proposal._id,
     ).catch((err) => console.error("Notification error:", err.message));
-
   } else if (status === PROPOSAL_STATUS.REJECTED) {
     // notify worker — non-blocking
     notifyProposalRejected(

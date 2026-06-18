@@ -129,6 +129,17 @@ const notifyProposalRejected = async (workerId, projectTitle, projectId, proposa
   } catch (err) { console.error("notifyProposalRejected error:", err.message); }
 };
 
+const notifyProjectInvitation = async (workerId, clientName, projectTitle, projectId) => {
+  try {
+    return await createNotification({
+      recipient: workerId,
+      type: "new_proposal",        // reuse closest existing type
+      title: "Project Invitation",
+      message: `${clientName} invited you to work on "${projectTitle}"`,
+      data: { projectId },
+    });
+  } catch (err) { console.error("notifyProjectInvitation error:", err.message); }
+};
 const notifyNewMessage = async (recipientId, senderName, conversationId) => {
   try {
     return await createNotification({
@@ -204,4 +215,6 @@ module.exports = {
   notifyNewReview,
   notifyBookingStatusChanged,
   notifyProjectInvitation,
+  notifyProjectInvitation,
+
 };
