@@ -92,8 +92,8 @@ const BOQ_BUILDERS = {
 
 const generateBoq = (estimation) => {
   const builder = BOQ_BUILDERS[estimation.serviceType];
-  if (!builder) throw new AppError(`Cannot generate BOQ for service type: ${estimation.serviceType}`, 400);[cite: 4]
-  return builder(estimation);[cite: 4]
+  if (!builder) throw new AppError(`Cannot generate BOQ for service type: ${estimation.serviceType}`, 400);
+  return builder(estimation);
 };
 
 module.exports = { generateBoq };

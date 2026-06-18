@@ -249,7 +249,7 @@ const ESTIMATION_RULES = {
 
 const runEstimation = (serviceType, extractedData) => {
   const rule = ESTIMATION_RULES[serviceType];
-  if (!rule) throw new AppError(`Unsupported service type: ${serviceType}`, 400);[cite: 3]
+  if (!rule) throw new AppError(`Unsupported service type: ${serviceType}`, 400);
   return rule(extractedData);
 };
 
