@@ -6,10 +6,17 @@ const aiService = require("./ai.service");
 
 const analyzeSchema = Joi.object({
   serviceType: Joi.string()
-    .valid("painting", "ceramic", "plumbing")
+    .valid(
+      "demolition_alteration",
+      "masonry_building",
+      "painting",
+      "plumbing",
+      "electrical",
+      "carpentry"
+    )
     .required()
     .messages({
-      "any.only": "serviceType must be one of: painting, ceramic, plumbing",
+      "any.only": "serviceType must be one of the 6 authorized construction trades: demolition_alteration, masonry_building, painting, plumbing, electrical, carpentry",
       "any.required": "serviceType is required",
     }),
   description: Joi.string().trim().min(5).max(2000).required().messages({
@@ -37,7 +44,7 @@ const analyze = catchAsync(async (req, res) => {
     userId,
   });
 
-  sendResponse(res, 200, result, "Estimation completed successfully");
+  sendResponse(res, 200, result, "Engineering Estimation and Localization completed successfully");
 });
 
 module.exports = {

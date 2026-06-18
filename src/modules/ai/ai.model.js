@@ -19,15 +19,27 @@ const materialPriceSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
-    unitPrice: {
+    baseUnitPrice: {
       type: Number,
       required: true,
+      min: 0,
+    },
+    handlingFeePerFloor: {
+      type: Number,
+      default: 0,
       min: 0,
     },
     category: {
       type: String,
       required: true,
-      enum: ["painting", "ceramic", "plumbing"],
+      enum: [
+        "demolition_alteration",
+        "masonry_building",
+        "painting",
+        "plumbing",
+        "electrical",
+        "carpentry"
+      ],
       index: true,
     },
     isActive: {
@@ -49,7 +61,14 @@ const aiEstimationSchema = new mongoose.Schema(
     serviceType: {
       type: String,
       required: true,
-      enum: ["painting", "ceramic", "plumbing"],
+      enum: [
+        "demolition_alteration",
+        "masonry_building",
+        "painting",
+        "plumbing",
+        "electrical",
+        "carpentry"
+      ],
     },
     description: {
       type: String,
