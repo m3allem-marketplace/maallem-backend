@@ -26,6 +26,7 @@ STRICT OUTPUT FORMAT:
 JSON Schema to strictly populate:
 {
   "serviceType": "demolition_alteration" | "masonry_building" | "painting" | "plumbing" | "electrical" | "carpentry",
+  "detectedLanguage": "ar" | "en",
   "dimensions": {
     "width": number | null,
     "length": number | null,

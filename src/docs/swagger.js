@@ -3461,6 +3461,83 @@ const swaggerDocument = {
         },
       },
     },
+    "/ai-recommendations": {
+      post: {
+        tags: ["AI"],
+        summary: "Get AI recommendations based on user story",
+        description: "Requires Bearer token. Analyzes the user's problem description using OpenAI, extracts the required service type and city, and returns a list of recommended workers from the database.",
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["story"],
+                properties: {
+                  story: {
+                    type: "string",
+                    example: "أنا ساكن في القاهرة وعندي مشكلة في مواسير المطبخ بتسرب مياه",
+                    minLength: 5,
+                    maxLength: 3000
+                  }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          200: {
+            description: "Recommendations generated successfully",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    success: { type: "boolean", example: true },
+                    message: { type: "string", example: "Recommendations generated successfully" },
+                    data: {
+                      type: "object",
+                      properties: {
+                        analysis: {
+                          type: "object",
+                          properties: {
+                            detectedService: { type: "string", example: "plumbing" },
+                            detectedCity: { type: "string", example: "القاهرة" },
+                            messageAr: { type: "string", example: "لقد قمنا بتحديد الخدمة كأعمال سباكة بسبب وجود تسريب في المياه..." }
+                          }
+                        },
+                        recommendations: {
+                          type: "array",
+                          items: {
+                            type: "object",
+                            properties: {
+                              _id: { type: "string" },
+                              specializations: { type: "array", items: { type: "string" } },
+                              location: { $ref: "#/components/schemas/Location" },
+                              user: {
+                                type: "object",
+                                properties: {
+                                  name: { type: "string" },
+                                  email: { type: "string" },
+                                  phone: { type: "string" }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          401: { $ref: "#/components/responses/Unauthorized" },
+          422: { $ref: "#/components/responses/ValidationError" }
+        }
+      }
+    }
   },
 };
 

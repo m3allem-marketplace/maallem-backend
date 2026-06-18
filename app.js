@@ -18,6 +18,7 @@ const { getSwaggerHtml } = require("./src/docs/swaggerPage");
 const notificationsRoutes = require("./src/modules/notifications/notifications.routes");
 const bookingsRoutes = require("./src/modules/bookings/bookings.routes");
 const aiRoutes = require("./src/modules/ai/ai.routes");
+const aiRecommendationsRoutes = require("./src/modules/ai_recommendations/ai_recommendations.routes");
 const { protect } = require("./src/modules/auth/auth.middleware");
 const catchAsync = require("./src/utils/catchAsync");
 const { authorizePusherChannel } = require("./src/modules/chat/pusher.auth");
@@ -163,6 +164,9 @@ app.use("/api/bookings", bookingsRoutes); // alias
 
 app.use("/api/v1/ai", aiRoutes);
 app.use("/api/ai", aiRoutes); // alias
+
+app.use("/api/v1/ai-recommendations", aiRecommendationsRoutes);
+app.use("/api/ai-recommendations", aiRecommendationsRoutes); // alias
 
 // ─── Error Handling ───────────────────────────────────────────────────────────
 app.use(notFound);
