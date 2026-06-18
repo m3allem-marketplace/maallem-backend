@@ -28,7 +28,6 @@ const createNotification = async ({ recipient, type, title, message, data = {} }
 const getMyNotifications = async (userId, page = 1, limit = 20) => {
   const skip = (page - 1) * limit;
 
-  // FIX 3: parallel DB calls instead of sequential
   const [notifications, total, unreadCount] = await Promise.all([
     Notification.find({ recipient: userId })
       .sort({ createdAt: -1 })
@@ -91,7 +90,7 @@ const deleteNotification = async (notificationId, userId) => {
   return { success: true };
 };
 
-// ─── Factory helpers — self-contained error handling (FIX 5) ─────────────────
+// ─── Factory helpers ──────────────────────────────────────────────────────────
 
 const notifyNewProposal = async (clientId, workerName, projectTitle, projectId, proposalId) => {
   try {
@@ -133,13 +132,14 @@ const notifyProjectInvitation = async (workerId, clientName, projectTitle, proje
   try {
     return await createNotification({
       recipient: workerId,
-      type: "new_proposal",        // reuse closest existing type
-      title: "Project Invitation",
-      message: `${clientName} invited you to work on "${projectTitle}"`,
+      type: "new_proposal",
+      title: "New Project Request",
+      message: `${clientName} sent you a project "${projectTitle}"`,
       data: { projectId },
     });
   } catch (err) { console.error("notifyProjectInvitation error:", err.message); }
 };
+
 const notifyNewMessage = async (recipientId, senderName, conversationId) => {
   try {
     return await createNotification({
@@ -188,18 +188,6 @@ const notifyBookingStatusChanged = async (clientId, status, bookingId) => {
   } catch (err) { console.error("notifyBookingStatusChanged error:", err.message); }
 };
 
-const notifyProjectInvitation = async (workerId, clientName, projectTitle, projectId) => {
-  try {
-    return await createNotification({
-      recipient: workerId,
-      type: "project_invitation",
-      title: "New Project Request",
-      message: `${clientName} sent you a project "${projectTitle}"`,
-      data: { projectId },
-    });
-  } catch (err) { console.error("notifyProjectInvitation error:", err.message); }
-};
-
 module.exports = {
   createNotification,
   getMyNotifications,
@@ -210,11 +198,9 @@ module.exports = {
   notifyNewProposal,
   notifyProposalAccepted,
   notifyProposalRejected,
+  notifyProjectInvitation,
   notifyNewMessage,
   notifyPaymentReceived,
   notifyNewReview,
   notifyBookingStatusChanged,
-  notifyProjectInvitation,
-  notifyProjectInvitation,
-
 };
