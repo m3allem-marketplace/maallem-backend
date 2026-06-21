@@ -20,6 +20,7 @@ const upload = multer({
 const workerUpload = upload.fields([
   { name: "avatar", maxCount: 1 },
   { name: "portfolioImages", maxCount: 10 },
+  { name: "idCard", maxCount: 1 },
 ]);
 
 const companyUpload = upload.fields([

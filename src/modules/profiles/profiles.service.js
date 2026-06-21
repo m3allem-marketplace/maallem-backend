@@ -93,6 +93,16 @@ const createWorkerProfile = async (userId, body, files) => {
   }
 
   requireCloudinary();
+  const idCard = files?.idCard?.[0]
+    ? await uploadFile(files.idCard[0], "workers/idcards")
+    : null;
+
+  if (!idCard) {
+    const error = new Error("ID card is required to create a worker profile");
+    error.statusCode = 400;
+    throw error;
+  }
+
   const avatar = files?.avatar?.[0]
     ? await uploadFile(files.avatar[0], "workers/avatars")
     : "";
@@ -109,6 +119,7 @@ const createWorkerProfile = async (userId, body, files) => {
     specializations: parseArrayField(body.specializations) || [],
     location: normalizeLocation(body.location) || { address: "", city: "" },
     phone: body.phone || "",
+    idCard,
     portfolioImages,
   });
 
@@ -128,6 +139,12 @@ const updateWorkerProfile = async (userId, body, files) => {
     requireCloudinary();
     if (profile.avatar) await deleteByUrl(profile.avatar);
     profile.avatar = await uploadFile(files.avatar[0], "workers/avatars");
+  }
+
+  if (files?.idCard?.[0]) {
+    requireCloudinary();
+    if (profile.idCard) await deleteByUrl(profile.idCard);
+    profile.idCard = await uploadFile(files.idCard[0], "workers/idcards");
   }
 
   if (files?.portfolioImages?.length) {
@@ -170,6 +187,7 @@ const deleteWorkerProfile = async (userId) => {
   }
 
   if (profile.avatar) await deleteByUrl(profile.avatar);
+  if (profile.idCard) await deleteByUrl(profile.idCard);
   if (profile.portfolioImages?.length) {
     await deleteManyByUrl(profile.portfolioImages);
   }

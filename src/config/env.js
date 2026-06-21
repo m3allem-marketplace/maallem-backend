@@ -9,7 +9,7 @@ module.exports = {
   JWT_SECRET: process.env.JWT_SECRET || "your_jwt_secret",
   JWT_REFRESH_SECRET:
     process.env.JWT_REFRESH_SECRET || "your_jwt_refresh_secret",
-  JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || "15m",
+  JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || "7d",
   JWT_REFRESH_EXPIRES_IN: process.env.JWT_REFRESH_EXPIRES_IN || "7d",
   CLOUDINARY_CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME,
   CLOUDINARY_API_KEY: process.env.CLOUDINARY_API_KEY,

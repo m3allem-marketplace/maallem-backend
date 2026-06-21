@@ -334,6 +334,11 @@ const swaggerDocument = {
             format: "binary",
             description: "Profile photo",
           },
+          idCard: {
+            type: "string",
+            format: "binary",
+            description: "National ID Card photo (Required)",
+          },
           portfolioImages: {
             type: "array",
             items: { type: "string", format: "binary" },

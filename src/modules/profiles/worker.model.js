@@ -8,6 +8,7 @@ const workerProfileSchema = new mongoose.Schema(
       required: true,
       unique: true,
     },
+    idCard: { type: String, required: true },
     avatar: { type: String, default: "" },
     bio: { type: String, trim: true, maxlength: 2000, default: "" },
     experience: { type: String, trim: true, maxlength: 1000, default: "" },
@@ -46,7 +47,8 @@ workerProfileSchema.methods.checkComplete = function () {
       this.experience &&
       this.specializations?.length &&
       (this.location?.city || this.location?.address) &&
-      this.phone,
+      this.phone &&
+      this.idCard,
   );
 };
 
