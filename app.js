@@ -22,6 +22,7 @@ const aiRecommendationsRoutes = require("./src/modules/ai_recommendations/ai_rec
 const { protect } = require("./src/modules/auth/auth.middleware");
 const catchAsync = require("./src/utils/catchAsync");
 const { authorizePusherChannel } = require("./src/modules/chat/pusher.auth");
+const adminRoutes = require("./src/modules/admin/admin.routes");
 
 const app = express();
 app.set("trust proxy", 1);
@@ -115,6 +116,7 @@ app.use("/api/v1/chat", chatRoutes);
 app.use("/api/v1/users", usersRoutes);
 app.use("/api/chat", chatRoutes);
 app.use("/api/users", usersRoutes);
+app.use("/api/v1/admin", adminRoutes);
 
 // Aliases بدون v1 (لو حد نسيها)
 app.use("/api/auth", authLimiter, authRoutes);

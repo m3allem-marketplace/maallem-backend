@@ -30,6 +30,7 @@ const workerProfileSchema = new mongoose.Schema(
     phone: { type: String, trim: true, default: "" },
     portfolioImages: [{ type: String }],
     isProfileComplete: { type: Boolean, default: false },
+    isApproved: { type: Boolean, default: false },
   },
   { timestamps: true },
 );
