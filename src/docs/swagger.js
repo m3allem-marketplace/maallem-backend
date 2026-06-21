@@ -3537,6 +3537,57 @@ const swaggerDocument = {
           422: { $ref: "#/components/responses/ValidationError" }
         }
       }
+    },
+    "/admin/workers/{id}/approve": {
+      put: {
+        tags: ["Admin"],
+        summary: "Approve a worker",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: "id", in: "path", required: true, schema: { type: "string" } }
+        ],
+        responses: { 200: { description: "Worker approved" } }
+      }
+    },
+    "/admin/users/{id}/status": {
+      put: {
+        tags: ["Admin"],
+        summary: "Update user active status",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: "id", in: "path", required: true, schema: { type: "string" } }
+        ],
+        requestBody: { content: { "application/json": { schema: { type: "object", properties: { isActive: { type: "boolean" } } } } } },
+        responses: { 200: { description: "User status updated" } }
+      }
+    },
+    "/admin/payments/payouts": {
+      get: {
+        tags: ["Admin"],
+        summary: "List payout requests",
+        security: [{ bearerAuth: [] }],
+        responses: { 200: { description: "Payouts listed" } }
+      }
+    },
+    "/admin/payments/payouts/{id}/status": {
+      put: {
+        tags: ["Admin"],
+        summary: "Update payout request status",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: "id", in: "path", required: true, schema: { type: "string" } }
+        ],
+        requestBody: { content: { "application/json": { schema: { type: "object", properties: { status: { type: "string" } } } } } },
+        responses: { 200: { description: "Payout status updated" } }
+      }
+    },
+    "/admin/dashboard/stats": {
+      get: {
+        tags: ["Admin"],
+        summary: "Get dashboard statistics",
+        security: [{ bearerAuth: [] }],
+        responses: { 200: { description: "Dashboard stats" } }
+      }
     }
   },
 };
