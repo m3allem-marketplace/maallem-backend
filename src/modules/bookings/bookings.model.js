@@ -49,6 +49,7 @@ const bookingSchema = new mongoose.Schema(
       enum: [
         "pending_payment",
         "paid",
+        "in_progress",
         "delivered",
         "completed",
         "disputed",
