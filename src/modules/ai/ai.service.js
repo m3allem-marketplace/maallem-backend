@@ -8,7 +8,6 @@ const {
 } = require("./prompts");
 const { runEstimation } = require("./estimation.service");
 const { generateBoq } = require("./boq.service");
-const { calculatePricing } = require("./pricing.service");
 
 let openaiClient = null;
 
@@ -200,9 +199,7 @@ const translateAndLocalizeResponse = (result, extractedData) => {
       nameAr,
       readableSummaryAr: summaryAr,
       quantity: item.quantity,
-      unit: item.unit,
-      unitPrice: item.unitPrice,
-      totalPrice: item.totalPrice
+      unit: item.unit
     };
   });
 
@@ -244,18 +241,11 @@ const analyzeAndEstimate = async ({ serviceType, description, userId = null }) =
   const estimation = runEstimation(serviceType, extractedData);
   const boq = generateBoq(estimation);
 
-  const floorLevel = extractedData.scope?.floorLevel || 1;
-  const pricing = await calculatePricing(boq, estimation.laborHours, floorLevel);
-
   let result = {
     serviceType: estimation.serviceType,
     estimatedArea: estimation.estimatedArea,
     laborHours: estimation.laborHours,
-    materials: pricing.materials,
-    materialsTotal: pricing.materialsTotal,
-    laborCost: pricing.laborCost,
-    platformFee: pricing.platformFee,
-    grandTotal: pricing.grandTotal,
+    materials: boq.materials,
   };
 
   result = translateAndLocalizeResponse(result, extractedData);
