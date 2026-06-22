@@ -3,14 +3,22 @@ const { OPENAI_API_KEY } = require("../../config/env");
 const WorkerProfile = require("../profiles/worker.model");
 const AppError = require("../../utils/AppError");
 
-const openai = new OpenAI({
-  apiKey: OPENAI_API_KEY,
-});
+let openaiClient = null;
 
-const analyzeStoryAndRecommend = async ({ story }) => {
+const getOpenAIClient = () => {
   if (!OPENAI_API_KEY) {
     throw new AppError("OpenAI API key is not configured", 500);
   }
+  if (!openaiClient) {
+    openaiClient = new OpenAI({
+      apiKey: OPENAI_API_KEY,
+    });
+  }
+  return openaiClient;
+};
+
+const analyzeStoryAndRecommend = async ({ story }) => {
+  const client = getOpenAIClient();
 
   // 1. Analyze the story using OpenAI
   const systemPrompt = `You are an expert platform assistant for a construction and maintenance services platform in Egypt.
@@ -26,7 +34,7 @@ Return ONLY a valid JSON object matching this schema, without markdown blocks or
   "reasonAr": "string"
 }`;
 
-  const completion = await openai.chat.completions.create({
+  const completion = await client.chat.completions.create({
     model: "gpt-4o-mini",
     messages: [
       { role: "system", content: systemPrompt },

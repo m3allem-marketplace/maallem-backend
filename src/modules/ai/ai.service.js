@@ -8,6 +8,7 @@ const {
 } = require("./prompts");
 const { runEstimation } = require("./estimation.service");
 const { generateBoq } = require("./boq.service");
+const { calculatePricing } = require("./pricing.service");
 
 let openaiClient = null;
 
@@ -48,27 +49,50 @@ const validateExtractedData = (serviceType, data) => {
   }
 
   const normalized = { ...data, serviceType };
+  if (!normalized.dimensions) {
+    normalized.dimensions = {};
+  }
+
+  let fallbackUsed = false;
 
   if (serviceType === "painting") {
-    if (!normalized.width || !normalized.length || !normalized.height) {
-      throw new AppError(
-        "Could not extract room dimensions (width, length, height) from description",
-        422,
-      );
+    if (!normalized.dimensions.width || !normalized.dimensions.length || !normalized.dimensions.height) {
+      normalized.dimensions.width = normalized.dimensions.width || 4.0;
+      normalized.dimensions.length = normalized.dimensions.length || 4.0;
+      normalized.dimensions.height = normalized.dimensions.height || 2.8;
+      fallbackUsed = true;
     }
   } else if (serviceType === "ceramic") {
-    if (!normalized.width || !normalized.length) {
-      throw new AppError(
-        "Could not extract room dimensions (width, length) from description",
-        422,
-      );
+    if (!normalized.dimensions.width || !normalized.dimensions.length) {
+      normalized.dimensions.width = normalized.dimensions.width || 4.0;
+      normalized.dimensions.length = normalized.dimensions.length || 4.0;
+      fallbackUsed = true;
     }
   } else if (serviceType === "plumbing") {
-    if (!normalized.area) {
-      throw new AppError("Could not extract bathroom area from description", 422);
+    if (!normalized.dimensions.area) {
+      normalized.dimensions.area = 4.0;
+      fallbackUsed = true;
+    }
+  } else if (serviceType === "demolition_alteration" || serviceType === "masonry_building") {
+    if (!normalized.dimensions.linearMeters && !normalized.dimensions.area && (!normalized.dimensions.width || !normalized.dimensions.height)) {
+      normalized.dimensions.width = normalized.dimensions.width || 3.0;
+      normalized.dimensions.height = normalized.dimensions.height || 2.8;
+      fallbackUsed = true;
+    }
+  } else if (serviceType === "electrical") {
+    if (!normalized.dimensions.area && (!normalized.dimensions.width || !normalized.dimensions.length)) {
+      normalized.dimensions.width = normalized.dimensions.width || 4.0;
+      normalized.dimensions.length = normalized.dimensions.length || 4.0;
+      fallbackUsed = true;
+    }
+  } else if (serviceType === "carpentry") {
+    if (!normalized.dimensions.quantity) {
+      normalized.dimensions.quantity = 1;
+      fallbackUsed = true;
     }
   }
 
+  normalized.fallbackUsed = fallbackUsed;
   return normalized;
 };
 
@@ -176,7 +200,9 @@ const translateAndLocalizeResponse = (result, extractedData) => {
       nameAr,
       readableSummaryAr: summaryAr,
       quantity: item.quantity,
-      unit: item.unit
+      unit: item.unit,
+      unitPrice: item.unitPrice,
+      totalPrice: item.totalPrice
     };
   });
 
@@ -196,8 +222,14 @@ const translateAndLocalizeResponse = (result, extractedData) => {
     commentaryEn += ` Items for scraping old damaged paint, treating wall moisture, and applying 3 coats of putty have been included to ensure a perfectly level surface before final painting.`;
   }
 
+  if (extractedData.fallbackUsed) {
+    commentaryAr += ` تم استخدام مقاسات افتراضية قياسية لعدم تحديد الأبعاد في الطلب (مثال: أبعاد الغرفة 4×4م بارتفاع 2.8م). يمكنك تحديد المقاسات الفعلية لتعديل المقايسة.`;
+    commentaryEn += ` Standard default dimensions were applied because specific measurements were not provided (e.g., room size 4x4m, height 2.8m). You can write the actual dimensions in the description to refine the estimate.`;
+  }
+
   return {
     ...result,
+    fallbackUsed: extractedData.fallbackUsed,
     detectedLanguage: lang,
     tradeName: lang === "en" ? tradeMapEn[result.serviceType] : tradeMapAr[result.serviceType],
     executionCommentary: lang === "en" ? commentaryEn : commentaryAr,
@@ -212,11 +244,18 @@ const analyzeAndEstimate = async ({ serviceType, description, userId = null }) =
   const estimation = runEstimation(serviceType, extractedData);
   const boq = generateBoq(estimation);
 
+  const floorLevel = extractedData.scope?.floorLevel || 1;
+  const pricing = await calculatePricing(boq, estimation.laborHours, floorLevel);
+
   let result = {
     serviceType: estimation.serviceType,
     estimatedArea: estimation.estimatedArea,
     laborHours: estimation.laborHours,
-    materials: boq.materials,
+    materials: pricing.materials,
+    materialsTotal: pricing.materialsTotal,
+    laborCost: pricing.laborCost,
+    platformFee: pricing.platformFee,
+    grandTotal: pricing.grandTotal,
   };
 
   result = translateAndLocalizeResponse(result, extractedData);
@@ -234,16 +273,7 @@ const analyzeAndEstimate = async ({ serviceType, description, userId = null }) =
   return result;
 };
 
-const getHistory = async (userId) => {
-  const history = await AiEstimation.find({ user: userId })
-    .sort({ createdAt: -1 })
-    .select("-__v")
-    .lean();
-  return history;
-};
-
 module.exports = {
   analyzeAndEstimate,
   extractDataWithAI,
-  getHistory,
 };
