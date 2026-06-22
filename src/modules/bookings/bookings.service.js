@@ -1,5 +1,6 @@
 const Booking = require("./bookings.model");
 const User = require("../auth/auth.model");
+const Release = require("./releases.model");
 const AppError = require("../../utils/AppError");
 const { notifyBookingStatusChanged } = require("../notifications/notifications.service");
 
@@ -62,6 +63,12 @@ const deliverBooking = async (bookingId, providerId) => {
     throw new AppError("Booking not found", 404);
   }
 
+  // Check if booking uses releases
+  const releaseCount = await Release.countDocuments({ booking: bookingId });
+  if (releaseCount > 0) {
+    throw new AppError("This booking uses releases. Please deliver releases individually.", 400);
+  }
+
   if (booking.status !== "paid") {
     throw new AppError("Work can only be delivered after the booking is paid", 400);
   }
@@ -84,6 +91,12 @@ const approveBooking = async (bookingId, clientId) => {
   const booking = await Booking.findOne({ _id: bookingId, client: clientId });
   if (!booking) {
     throw new AppError("Booking not found", 404);
+  }
+
+  // Check if booking uses releases
+  const releaseCount = await Release.countDocuments({ booking: bookingId });
+  if (releaseCount > 0) {
+    throw new AppError("This booking uses releases. Please approve releases individually.", 400);
   }
 
   if (booking.status !== "delivered") {

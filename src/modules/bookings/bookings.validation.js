@@ -39,7 +39,18 @@ const resolveDisputeSchema = Joi.object({
   }),
 });
 
+const createReleasesSchema = Joi.object({
+  releases: Joi.array().items(
+    Joi.object({
+      name: Joi.string().required().trim(),
+      amount: Joi.number().min(0).required(),
+      dueDate: Joi.date().iso().optional(),
+    })
+  ).min(1).required(),
+});
+
 module.exports = {
   createBookingSchema,
   resolveDisputeSchema,
+  createReleasesSchema,
 };

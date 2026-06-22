@@ -3466,6 +3466,113 @@ const swaggerDocument = {
         },
       },
     },
+    "/bookings/{id}/releases": {
+      post: {
+        tags: ["Bookings"],
+        summary: "Create releases for a booking",
+        description: "Creates milestones/releases. The total amount must equal the booking price.",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: { type: "string" },
+            description: "Booking MongoDB _id",
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  releases: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      properties: {
+                        name: { type: "string", example: "Phase 1" },
+                        amount: { type: "number", example: 50 },
+                        dueDate: { type: "string", format: "date-time" }
+                      },
+                      required: ["name", "amount"]
+                    }
+                  }
+                },
+                required: ["releases"]
+              }
+            }
+          }
+        },
+        responses: {
+          201: { description: "Releases created successfully" },
+          400: { description: "Bad request or validation error" },
+          401: { $ref: "#/components/responses/Unauthorized" },
+          403: { $ref: "#/components/responses/Forbidden" },
+          404: { $ref: "#/components/responses/NotFound" },
+        }
+      },
+      get: {
+        tags: ["Bookings"],
+        summary: "Get releases for a booking",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: { type: "string" },
+            description: "Booking MongoDB _id",
+          },
+        ],
+        responses: {
+          200: { description: "Releases fetched successfully" },
+          401: { $ref: "#/components/responses/Unauthorized" },
+          403: { $ref: "#/components/responses/Forbidden" },
+          404: { $ref: "#/components/responses/NotFound" },
+        }
+      }
+    },
+    "/bookings/{id}/releases/{releaseId}/deliver": {
+      post: {
+        tags: ["Bookings"],
+        summary: "Deliver a specific release",
+        description: "Requires worker/company role.",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: "id", in: "path", required: true, schema: { type: "string" } },
+          { name: "releaseId", in: "path", required: true, schema: { type: "string" } }
+        ],
+        responses: {
+          200: { description: "Release delivered" },
+          400: { description: "Bad request" },
+          401: { $ref: "#/components/responses/Unauthorized" },
+          403: { $ref: "#/components/responses/Forbidden" },
+          404: { $ref: "#/components/responses/NotFound" },
+        }
+      }
+    },
+    "/bookings/{id}/releases/{releaseId}/approve": {
+      post: {
+        tags: ["Bookings"],
+        summary: "Approve a specific release",
+        description: "Requires user (client) role. Approves release and transfers funds.",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: "id", in: "path", required: true, schema: { type: "string" } },
+          { name: "releaseId", in: "path", required: true, schema: { type: "string" } }
+        ],
+        responses: {
+          200: { description: "Release approved" },
+          400: { description: "Bad request" },
+          401: { $ref: "#/components/responses/Unauthorized" },
+          403: { $ref: "#/components/responses/Forbidden" },
+          404: { $ref: "#/components/responses/NotFound" },
+        }
+      }
+    },
     "/ai-recommendations": {
       post: {
         tags: ["AI"],
