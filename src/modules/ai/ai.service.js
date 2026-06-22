@@ -52,48 +52,69 @@ const validateExtractedData = (serviceType, data) => {
     normalized.dimensions = {};
   }
 
-  let fallbackUsed = false;
-
+  // ── Dimension validation: throw 422 so the frontend shows the guidance box ──
   if (serviceType === "painting") {
-    if (!normalized.dimensions.width || !normalized.dimensions.length || !normalized.dimensions.height) {
-      normalized.dimensions.width = normalized.dimensions.width || 4.0;
-      normalized.dimensions.length = normalized.dimensions.length || 4.0;
-      normalized.dimensions.height = normalized.dimensions.height || 2.8;
-      fallbackUsed = true;
+    const hasDims =
+      normalized.dimensions.width &&
+      normalized.dimensions.length &&
+      normalized.dimensions.height;
+    if (!hasDims) {
+      throw new AppError(
+        "Could not extract room dimensions (width, length, height) from description",
+        422
+      );
     }
   } else if (serviceType === "ceramic") {
-    if (!normalized.dimensions.width || !normalized.dimensions.length) {
-      normalized.dimensions.width = normalized.dimensions.width || 4.0;
-      normalized.dimensions.length = normalized.dimensions.length || 4.0;
-      fallbackUsed = true;
+    const hasDims =
+      normalized.dimensions.width && normalized.dimensions.length;
+    if (!hasDims) {
+      throw new AppError(
+        "Could not extract floor dimensions (width, length) from description",
+        422
+      );
     }
   } else if (serviceType === "plumbing") {
     if (!normalized.dimensions.area) {
-      normalized.dimensions.area = 4.0;
-      fallbackUsed = true;
+      throw new AppError(
+        "Could not extract bathroom/area size from description",
+        422
+      );
     }
-  } else if (serviceType === "demolition_alteration" || serviceType === "masonry_building") {
-    if (!normalized.dimensions.linearMeters && !normalized.dimensions.area && (!normalized.dimensions.width || !normalized.dimensions.height)) {
-      normalized.dimensions.width = normalized.dimensions.width || 3.0;
-      normalized.dimensions.height = normalized.dimensions.height || 2.8;
-      fallbackUsed = true;
+  } else if (
+    serviceType === "demolition_alteration" ||
+    serviceType === "masonry_building"
+  ) {
+    const hasLinear = normalized.dimensions.linearMeters;
+    const hasArea = normalized.dimensions.area;
+    const hasWH =
+      normalized.dimensions.width && normalized.dimensions.height;
+    if (!hasLinear && !hasArea && !hasWH) {
+      throw new AppError(
+        "Could not extract wall/area dimensions (width and height) from description",
+        422
+      );
     }
   } else if (serviceType === "electrical") {
-    if (!normalized.dimensions.area && (!normalized.dimensions.width || !normalized.dimensions.length)) {
-      normalized.dimensions.width = normalized.dimensions.width || 4.0;
-      normalized.dimensions.length = normalized.dimensions.length || 4.0;
-      fallbackUsed = true;
+    const hasArea = normalized.dimensions.area;
+    const hasWL =
+      normalized.dimensions.width && normalized.dimensions.length;
+    if (!hasArea && !hasWL) {
+      throw new AppError(
+        "Could not extract room/apartment area from description",
+        422
+      );
     }
   } else if (serviceType === "carpentry") {
+    // Carpentry only needs a door count — default to 1 if not found
     if (!normalized.dimensions.quantity) {
       normalized.dimensions.quantity = 1;
-      fallbackUsed = true;
     }
   }
 
-  normalized.fallbackUsed = fallbackUsed;
+  normalized.fallbackUsed = false;
   return normalized;
 };
+
 
 const extractDataWithAI = async (serviceType, description) => {
   const client = getOpenAIClient();
