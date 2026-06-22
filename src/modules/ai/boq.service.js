@@ -1,6 +1,5 @@
 const AppError = require("../../utils/AppError");
 
-// إضافة نثريات ومستهلكات تركيب ثابتة وصغيرة (شريط لحام، غراء مواسير، مسامير، كانات) لكل فئة
 const addSundries = (materialsList, category) => {
   const sundryItem = {
     sku: "SUND001",
