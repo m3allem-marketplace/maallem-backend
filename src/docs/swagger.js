@@ -3410,6 +3410,37 @@ const swaggerDocument = {
         },
       },
     },
+    "/ai/history": {
+      get: {
+        tags: ["AI"],
+        summary: "Get AI estimation history",
+        description: "Requires authentication. Retrieves the history of all AI estimations requested by the authenticated user or worker.",
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: {
+            description: "History retrieved successfully",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    success: { type: "boolean", example: true },
+                    message: { type: "string", example: "AI interaction history retrieved successfully" },
+                    data: {
+                      type: "array",
+                      items: {
+                        type: "object"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          401: { $ref: "#/components/responses/Unauthorized" }
+        }
+      }
+    },
     "/bookings/{id}/resolve-dispute": {
       post: {
         tags: ["Bookings"],

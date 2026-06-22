@@ -47,6 +47,13 @@ const analyze = catchAsync(async (req, res) => {
   sendResponse(res, 200, result, "Engineering Estimation and Localization completed successfully");
 });
 
+const getHistory = catchAsync(async (req, res) => {
+  const userId = req.user.id;
+  const history = await aiService.getHistory(userId);
+  sendResponse(res, 200, history, "AI interaction history retrieved successfully");
+});
+
 module.exports = {
   analyze,
+  getHistory,
 };

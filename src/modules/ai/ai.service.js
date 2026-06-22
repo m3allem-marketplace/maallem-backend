@@ -234,7 +234,16 @@ const analyzeAndEstimate = async ({ serviceType, description, userId = null }) =
   return result;
 };
 
+const getHistory = async (userId) => {
+  const history = await AiEstimation.find({ user: userId })
+    .sort({ createdAt: -1 })
+    .select("-__v")
+    .lean();
+  return history;
+};
+
 module.exports = {
   analyzeAndEstimate,
   extractDataWithAI,
+  getHistory,
 };
