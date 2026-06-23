@@ -80,11 +80,13 @@ const aiEstimationSchema = new mongoose.Schema(
     },
     estimation: {
       type: mongoose.Schema.Types.Mixed,
-      required: true,
+      required: false,
+      default: {},
     },
     boq: {
       type: mongoose.Schema.Types.Mixed,
-      required: true,
+      required: false,
+      default: {},
     },
     result: {
       type: mongoose.Schema.Types.Mixed,

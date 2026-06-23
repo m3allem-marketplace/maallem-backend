@@ -43,73 +43,29 @@ const validateExtractedData = (serviceType, data) => {
     throw new AppError("AI returned invalid extraction data", 502);
   }
 
-  if (data.serviceType && data.serviceType !== serviceType) {
-    throw new AppError("AI extracted serviceType does not match request", 502);
-  }
+  // Set default values if fields are missing in the schema
+  const normalized = {
+    isExtractionComplete: typeof data.isExtractionComplete === "boolean" ? data.isExtractionComplete : false,
+    followUpMessage: typeof data.followUpMessage === "string" ? data.followUpMessage : "",
+    serviceType: data.serviceType || serviceType,
+    dimensions: data.dimensions || {},
+    scope: data.scope || {}
+  };
 
-  const normalized = { ...data, serviceType };
-  if (!normalized.dimensions) {
-    normalized.dimensions = {};
-  }
+  // Ensure nested properties exist in dimensions
+  normalized.dimensions = {
+    width: typeof normalized.dimensions.width === "number" ? normalized.dimensions.width : null,
+    length: typeof normalized.dimensions.length === "number" ? normalized.dimensions.length : null,
+    height: typeof normalized.dimensions.height === "number" ? normalized.dimensions.height : null,
+    area: typeof normalized.dimensions.area === "number" ? normalized.dimensions.area : null,
+    ...normalized.dimensions
+  };
 
-  // ── Dimension validation: throw 422 so the frontend shows the guidance box ──
-  if (serviceType === "painting") {
-    const hasDims =
-      normalized.dimensions.width &&
-      normalized.dimensions.length &&
-      normalized.dimensions.height;
-    if (!hasDims) {
-      throw new AppError(
-        "Could not extract room dimensions (width, length, height) from description",
-        422
-      );
-    }
-  } else if (serviceType === "ceramic") {
-    const hasDims =
-      normalized.dimensions.width && normalized.dimensions.length;
-    if (!hasDims) {
-      throw new AppError(
-        "Could not extract floor dimensions (width, length) from description",
-        422
-      );
-    }
-  } else if (serviceType === "plumbing") {
-    if (!normalized.dimensions.area) {
-      throw new AppError(
-        "Could not extract bathroom/area size from description",
-        422
-      );
-    }
-  } else if (
-    serviceType === "demolition_alteration" ||
-    serviceType === "masonry_building"
-  ) {
-    const hasLinear = normalized.dimensions.linearMeters;
-    const hasArea = normalized.dimensions.area;
-    const hasWH =
-      normalized.dimensions.width && normalized.dimensions.height;
-    if (!hasLinear && !hasArea && !hasWH) {
-      throw new AppError(
-        "Could not extract wall/area dimensions (width and height) from description",
-        422
-      );
-    }
-  } else if (serviceType === "electrical") {
-    const hasArea = normalized.dimensions.area;
-    const hasWL =
-      normalized.dimensions.width && normalized.dimensions.length;
-    if (!hasArea && !hasWL) {
-      throw new AppError(
-        "Could not extract room/apartment area from description",
-        422
-      );
-    }
-  } else if (serviceType === "carpentry") {
-    // Carpentry only needs a door count — default to 1 if not found
-    if (!normalized.dimensions.quantity) {
-      normalized.dimensions.quantity = 1;
-    }
-  }
+  // Ensure nested properties exist in scope
+  normalized.scope = {
+    conditionSeverity: typeof normalized.scope.conditionSeverity === "string" ? normalized.scope.conditionSeverity : null,
+    ...normalized.scope
+  };
 
   normalized.fallbackUsed = false;
   return normalized;
@@ -122,7 +78,48 @@ const extractDataWithAI = async (serviceType, description) => {
   const completion = await client.chat.completions.create({
     model: "gemini-2.5-flash",
     temperature: 0,
-    response_format: { type: "json_object" },
+    response_format: {
+      type: "json_schema",
+      json_schema: {
+        name: "ConversationalExtraction",
+        strict: true,
+        schema: {
+          type: "object",
+          properties: {
+            isExtractionComplete: { type: "boolean" },
+            followUpMessage: { type: "string" },
+            serviceType: { 
+              type: ["string", "null"],
+              enum: ["demolition_alteration", "masonry_building", "painting", "plumbing", "electrical", "carpentry", null]
+            },
+            dimensions: {
+              type: "object",
+              properties: {
+                width: { type: ["number", "null"] },
+                length: { type: ["number", "null"] },
+                height: { type: ["number", "null"] },
+                area: { type: ["number", "null"] }
+              },
+              required: ["width", "length", "height", "area"],
+              additionalProperties: false
+            },
+            scope: {
+              type: "object",
+              properties: {
+                conditionSeverity: { 
+                  type: ["string", "null"],
+                  enum: ["low", "medium", "high", null]
+                }
+              },
+              required: ["conditionSeverity"],
+              additionalProperties: false
+            }
+          },
+          required: ["isExtractionComplete", "followUpMessage", "serviceType", "dimensions", "scope"],
+          additionalProperties: false
+        }
+      }
+    },
     messages: [
       { role: "system", content: EXTRACTION_SYSTEM_PROMPT },
       { role: "user", content: buildExtractionUserPrompt(serviceType, description) },
@@ -259,10 +256,53 @@ const translateAndLocalizeResponse = (result, extractedData) => {
 
 const analyzeAndEstimate = async ({ serviceType, description, userId = null }) => {
   const extractedData = await extractDataWithAI(serviceType, description);
+
+  // If extraction is NOT complete, bypass the estimation logic and return slot filling response
+  if (!extractedData.isExtractionComplete) {
+    const tradeMapAr = {
+      demolition_alteration: "تعديلات معمارية وتكسير حوائط",
+      masonry_building: "أعمال مباني الطوب والمحارة",
+      painting: "أعمال النقاشة والدهانات الفاخرة",
+      plumbing: "تأسيس وتشطيب شبكات السباكة وصرف صحي",
+      electrical: "تأسيس سلك وعلب الشبكات الكهربائية",
+      carpentry: "تركيب حلوق وأبواب خشبية نجارة"
+    };
+
+    const result = {
+      isExtractionComplete: false,
+      followUpMessage: extractedData.followUpMessage,
+      serviceType: extractedData.serviceType,
+      dimensions: extractedData.dimensions,
+      scope: extractedData.scope,
+      estimatedArea: 0,
+      laborHours: 0,
+      materials: [],
+      tradeName: extractedData.serviceType ? tradeMapAr[extractedData.serviceType] : "غير محدد",
+      executionCommentary: extractedData.followUpMessage,
+      fallbackUsed: false
+    };
+
+    // Save conversational step to DB
+    await AiEstimation.create({
+      user: userId,
+      serviceType,
+      description,
+      extractedData,
+      estimation: {},
+      boq: { materials: [] },
+      result,
+    });
+
+    return result;
+  }
+
+  // Otherwise, the extraction is complete! Run the calculations as usual
   const estimation = runEstimation(serviceType, extractedData);
   const boq = generateBoq(estimation);
 
   let result = {
+    isExtractionComplete: true,
+    followUpMessage: extractedData.followUpMessage,
     serviceType: estimation.serviceType,
     estimatedArea: estimation.estimatedArea,
     laborHours: estimation.laborHours,
