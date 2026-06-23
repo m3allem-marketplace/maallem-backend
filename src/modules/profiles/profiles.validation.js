@@ -46,6 +46,7 @@ const workerProfileSchema = Joi.object({
     .messages({
       "string.pattern.base": "Please enter a valid phone number",
     }),
+  knownWorkerName: Joi.string().max(150).allow("").optional(),
   removePortfolioImages: Joi.alternatives()
     .try(Joi.array().items(Joi.string().uri()), Joi.string())
     .optional(),

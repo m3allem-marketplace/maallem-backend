@@ -276,6 +276,7 @@ const swaggerDocument = {
           },
           location: { $ref: "#/components/schemas/Location" },
           phone: { type: "string", example: "01098765432" },
+          knownWorkerName: { type: "string", example: "أحمد السباك" },
           portfolioImages: {
             type: "array",
             items: { type: "string", format: "uri" },
@@ -329,6 +330,7 @@ const swaggerDocument = {
             example: '{"address":"شارع التحرير","city":"القاهرة"}',
           },
           phone: { type: "string", example: "01098765432" },
+          knownWorkerName: { type: "string", description: "Worker who referred or is known to this worker", example: "أحمد السباك" },
           avatar: {
             type: "string",
             format: "binary",

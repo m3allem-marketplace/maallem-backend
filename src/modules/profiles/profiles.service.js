@@ -119,6 +119,7 @@ const createWorkerProfile = async (userId, body, files) => {
     specializations: parseArrayField(body.specializations) || [],
     location: normalizeLocation(body.location) || { address: "", city: "" },
     phone: body.phone || "",
+    knownWorkerName: body.knownWorkerName || "",
     idCard,
     portfolioImages,
   });
@@ -173,6 +174,7 @@ const updateWorkerProfile = async (userId, body, files) => {
     profile.location = normalizeLocation(body.location);
   }
   if (body.phone !== undefined) profile.phone = body.phone;
+  if (body.knownWorkerName !== undefined) profile.knownWorkerName = body.knownWorkerName;
 
   await profile.save();
   return profile.populate("user", USER_PUBLIC_FIELDS);
