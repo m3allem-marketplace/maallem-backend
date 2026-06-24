@@ -282,6 +282,28 @@ const swaggerDocument = {
             items: { type: "string", format: "uri" },
           },
           isProfileComplete: { type: "boolean", example: true },
+          averageRating: { type: "number", example: 4.5 },
+          totalReviews: { type: "integer", example: 12 },
+          recentReviews: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                _id: { type: "string" },
+                rating: { type: "number" },
+                comment: { type: "string" },
+                reviewer: {
+                  type: "object",
+                  properties: {
+                    _id: { type: "string" },
+                    name: { type: "string" },
+                    avatar: { type: "string" }
+                  }
+                },
+                createdAt: { type: "string", format: "date-time" }
+              }
+            }
+          },
           createdAt: { type: "string", format: "date-time" },
           updatedAt: { type: "string", format: "date-time" },
         },

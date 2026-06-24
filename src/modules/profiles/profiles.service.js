@@ -1,6 +1,7 @@
 const User = require("../auth/auth.model");
 const WorkerProfile = require("./worker.model");
 const CompanyProfile = require("./company.model");
+const Review = require("../reviews/reviews.model");
 const {
   uploadFile,
   uploadMany,
@@ -25,10 +26,19 @@ const assertRole = (userRole, expected) => {
 
 const getProfileByUser = async (userId, role) => {
   if (role === "worker") {
-    return WorkerProfile.findOne({ user: userId }).populate(
-      "user",
-      USER_PUBLIC_FIELDS,
-    );
+    const profile = await WorkerProfile.findOne({ user: userId })
+      .populate("user", USER_PUBLIC_FIELDS)
+      .lean();
+      
+    if (profile) {
+      const reviews = await Review.find({ reviewee: userId, isHidden: false })
+        .populate("reviewer", "name avatar role")
+        .sort("-createdAt")
+        .limit(10);
+      profile.recentReviews = reviews;
+    }
+    
+    return profile;
   }
   if (role === "company") {
     return CompanyProfile.findOne({ user: userId }).populate(
@@ -72,12 +82,22 @@ const getWorkerById = async (id) => {
   const profile = await WorkerProfile.findById(id).populate(
     "user",
     USER_PUBLIC_FIELDS,
-  );
+  ).lean();
+  
   if (!profile) {
     const error = new Error("Worker profile not found");
     error.statusCode = 404;
     throw error;
   }
+
+  // Fetch recent reviews
+  const reviews = await Review.find({ reviewee: profile.user._id, isHidden: false })
+    .populate("reviewer", "name avatar role")
+    .sort("-createdAt")
+    .limit(10);
+    
+  profile.recentReviews = reviews;
+
   return profile;
 };
 
