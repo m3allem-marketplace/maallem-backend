@@ -1,6 +1,6 @@
 const express = require("express");
 const aiController = require("./ai.controller");
-const aiRecommendationsRouter = require("./ai_recommendations.routes");
+const aiRecommendationsRouter = require("../ai_recommendations/ai_recommendations.routes");
 const { protect } = require("../auth/auth.middleware");
 
 const router = express.Router();
