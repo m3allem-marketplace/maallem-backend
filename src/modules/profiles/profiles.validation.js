@@ -74,20 +74,35 @@ const companyProfileSchema = Joi.object({
 
 const normalizeLocation = (location) => {
   if (!location) return undefined;
+
+  let parsed = location;
   if (typeof location === "string") {
-    return { address: location, city: "" };
+    try {
+      parsed = JSON.parse(location);
+    } catch {
+      return { address: location, city: "" };
+    }
   }
-  if (location.lng !== undefined && location.lat !== undefined) {
-    return {
-      address: location.address || "",
-      city: location.city || "",
-      coordinates: {
-        type: "Point",
-        coordinates: [parseFloat(location.lng), parseFloat(location.lat)],
-      },
-    };
+
+  if (typeof parsed === "string") {
+    return { address: parsed, city: "" };
   }
-  return location;
+
+  if (typeof parsed === "object" && parsed !== null) {
+    if (parsed.lng !== undefined && parsed.lat !== undefined) {
+      return {
+        address: parsed.address || "",
+        city: parsed.city || "",
+        coordinates: {
+          type: "Point",
+          coordinates: [parseFloat(parsed.lng), parseFloat(parsed.lat)],
+        },
+      };
+    }
+    return parsed;
+  }
+
+  return parsed;
 };
 
 module.exports = {
