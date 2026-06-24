@@ -23,6 +23,7 @@ const { protect } = require("./src/modules/auth/auth.middleware");
 const catchAsync = require("./src/utils/catchAsync");
 const { authorizePusherChannel } = require("./src/modules/chat/pusher.auth");
 const adminRoutes = require("./src/modules/admin/admin.routes");
+const reviewsRoutes = require("./src/modules/reviews/reviews.routes");
 
 const app = express();
 app.set("trust proxy", 1);
@@ -117,12 +118,14 @@ app.use("/api/v1/users", usersRoutes);
 app.use("/api/chat", chatRoutes);
 app.use("/api/users", usersRoutes);
 app.use("/api/v1/admin", adminRoutes);
+app.use("/api/v1/reviews", reviewsRoutes);
 
 // Aliases بدون v1 (لو حد نسيها)
 app.use("/api/auth", authLimiter, authRoutes);
 app.use("/api/profiles", profilesRoutes);
 app.use("/api/projects", projectsRoutes);
 app.use("/api/proposals", proposalsRoutes);
+app.use("/api/reviews", reviewsRoutes);
 
 app.get("/", (req, res) => {
   res.redirect("/api-docs");

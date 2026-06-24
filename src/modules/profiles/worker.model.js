@@ -33,6 +33,8 @@ const workerProfileSchema = new mongoose.Schema(
     portfolioImages: [{ type: String }],
     isProfileComplete: { type: Boolean, default: false },
     isApproved: { type: Boolean, default: false },
+    averageRating: { type: Number, default: 0, min: 0, max: 5 },
+    totalReviews: { type: Number, default: 0 },
   },
   { timestamps: true },
 );

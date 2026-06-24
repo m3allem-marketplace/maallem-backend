@@ -3733,6 +3733,49 @@ const swaggerDocument = {
         security: [{ bearerAuth: [] }],
         responses: { 200: { description: "Dashboard stats" } }
       }
+    },
+    "/reviews/{workerId}": {
+      post: {
+        tags: ["Reviews"],
+        summary: "Add a review for a worker",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: "workerId", in: "path", required: true, schema: { type: "string" } }
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["rating"],
+                properties: {
+                  rating: { type: "number", minimum: 1, maximum: 5 },
+                  comment: { type: "string", maxLength: 1000 },
+                  booking: { type: "string" },
+                  project: { type: "string" }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          201: { description: "Review added successfully" },
+          400: { description: "Bad request" },
+          401: { $ref: "#/components/responses/Unauthorized" },
+          404: { $ref: "#/components/responses/NotFound" }
+        }
+      },
+      get: {
+        tags: ["Reviews"],
+        summary: "Get all reviews for a worker",
+        parameters: [
+          { name: "workerId", in: "path", required: true, schema: { type: "string" } },
+          { name: "page", in: "query", schema: { type: "integer", default: 1 } },
+          { name: "limit", in: "query", schema: { type: "integer", default: 10 } }
+        ],
+        responses: { 200: { description: "List of reviews" } }
+      }
     }
   },
 };
