@@ -1,4 +1,4 @@
-const AppError = require("../utils/appError");
+const AppError = require("../utils/AppError");
 
 exports.validateRequest = (schema) => {
   return (req, res, next) => {
