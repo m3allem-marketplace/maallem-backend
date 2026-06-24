@@ -23,10 +23,14 @@ const analyzeStoryAndRecommend = async ({ story }) => {
 
   // 1. Analyze the story using Gemini (OpenAI compatibility mode)
   const systemPrompt = `You are an expert platform assistant for a construction and maintenance services platform in Egypt.
-Your task is to read the user's story or problem description and figure out:
-1. The type of service required. It MUST be one of the following exact string values: "demolition_alteration", "masonry_building", "painting", "plumbing", "electrical", "carpentry".
-2. The city mentioned by the user (if any). If no city is mentioned, return null.
-3. A brief explanation in Arabic explaining why this service was chosen and a welcoming message telling the user we will find the best workers for them.`;
+Your task is to read the user's story or problem description and determine:
+1. The type of service required. It MUST be one of the following exact string values: "demolition_alteration", "masonry_building", "painting", "plumbing", "electrical", "carpentry", or "none" (if not matching any of these or if unclear).
+2. The city mentioned by the user (if any). If no city is mentioned, return "none".
+3. isExtractionComplete: Set to true ONLY if BOTH a specific serviceType (not "none") and a specific city (not "none") are clearly detected from the user's input. Otherwise, set it to false.
+4. A polite explanation/reply in Egyptian Arabic slang (reasonAr):
+   - If isExtractionComplete is true: Tell the user you have selected the service and city, and are fetching the best workers for them.
+   - If serviceType is "none": Ask the user politely to specify the problem or the trade they need help with.
+   - If serviceType is detected but city is "none": Acknowledge the trade and ask the user politely to specify their city/location so we can find local workers near them.`;
 
   const completion = await client.chat.completions.create({
     model: "gemini-2.5-flash",
@@ -43,17 +47,20 @@ Your task is to read the user's story or problem description and figure out:
           type: "object",
           properties: {
             serviceType: {
-              type: ["string", "null"],
-              enum: ["demolition_alteration", "masonry_building", "painting", "plumbing", "electrical", "carpentry", null]
+              type: "string",
+              enum: ["demolition_alteration", "masonry_building", "painting", "plumbing", "electrical", "carpentry", "none"]
             },
             city: {
-              type: ["string", "null"]
+              type: "string"
+            },
+            isExtractionComplete: {
+              type: "boolean"
             },
             reasonAr: {
               type: "string"
             }
           },
-          required: ["serviceType", "city", "reasonAr"],
+          required: ["serviceType", "city", "isExtractionComplete", "reasonAr"],
           additionalProperties: false
         }
       }
@@ -67,14 +74,18 @@ Your task is to read the user's story or problem description and figure out:
 
   const aiResult = JSON.parse(content);
 
-  const { serviceType, city, reasonAr } = aiResult;
+  const { serviceType, city, isExtractionComplete, reasonAr } = aiResult;
 
-  if (!serviceType) {
+  const detectedService = serviceType === "none" ? null : serviceType;
+  const detectedCity = city === "none" ? null : city;
+
+  if (!isExtractionComplete || !detectedService) {
     return {
       analysis: {
-        detectedService: null,
-        detectedCity: city,
-        messageAr: reasonAr || "لم نتمكن من تحديد الخدمة المطلوبة بدقة، يرجى المحاولة مرة أخرى وتوضيح المشكلة.",
+        detectedService: detectedService,
+        detectedCity: detectedCity,
+        isExtractionComplete: false,
+        messageAr: reasonAr || "لم نتمكن من تحديد الخدمة المطلوبة وموقعك بدقة. يرجى توضيح الخدمة المطلوبة وموقعك.",
       },
       recommendations: [],
     };
@@ -100,7 +111,7 @@ Your task is to read the user's story or problem description and figure out:
     return new RegExp(normalized, "i");
   };
 
-  const keywords = specializationMapping[serviceType] || [serviceType];
+  const keywords = specializationMapping[detectedService] || [detectedService];
   const specQueries = keywords.map(kw => {
     if (/[\u0600-\u06FF]/.test(kw)) {
       const normalizedPattern = kw
@@ -116,8 +127,8 @@ Your task is to read the user's story or problem description and figure out:
     $or: specQueries
   };
 
-  if (city) {
-    const cityRegex = makeArabicRegex(city);
+  if (detectedCity) {
+    const cityRegex = makeArabicRegex(detectedCity);
     if (cityRegex) {
       query["location.city"] = { $regex: cityRegex };
     }
@@ -131,7 +142,7 @@ Your task is to read the user's story or problem description and figure out:
 
   // If no workers found in the specific city, fallback to searching just by specialization
   let finalWorkers = recommendedWorkers;
-  if (finalWorkers.length === 0 && city) {
+  if (finalWorkers.length === 0 && detectedCity) {
     const fallbackQuery = {
       $or: specQueries
     };
@@ -143,8 +154,9 @@ Your task is to read the user's story or problem description and figure out:
 
   return {
     analysis: {
-      detectedService: serviceType,
-      detectedCity: city,
+      detectedService: detectedService,
+      detectedCity: detectedCity,
+      isExtractionComplete: true,
       messageAr: reasonAr,
     },
     recommendations: finalWorkers,
