@@ -328,8 +328,24 @@ const getHistory = async (userId) => {
   if (!userId) {
     throw new AppError("User ID is required to fetch history", 400);
   }
-  const history = await AiEstimation.find({ user: userId }).sort({ createdAt: -1 });
-  return history;
+  const estimations = await AiEstimation.find({ user: userId }).sort({ createdAt: 1 });
+  
+  const chatHistory = [];
+  estimations.forEach((est) => {
+    chatHistory.push({
+      role: "user",
+      content: est.description,
+      createdAt: est.createdAt
+    });
+    chatHistory.push({
+      role: "ai",
+      content: est.result?.executionCommentary || est.result?.executionCommentaryAr || est.result?.followUpMessage || "",
+      details: est.result,
+      createdAt: est.createdAt
+    });
+  });
+
+  return chatHistory;
 };
 
 module.exports = {
