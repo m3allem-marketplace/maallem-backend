@@ -324,7 +324,16 @@ const analyzeAndEstimate = async ({ serviceType, description, userId = null }) =
   return result;
 };
 
+const getHistory = async (userId) => {
+  if (!userId) {
+    throw new AppError("User ID is required to fetch history", 400);
+  }
+  const history = await AiEstimation.find({ user: userId }).sort({ createdAt: -1 });
+  return history;
+};
+
 module.exports = {
   analyzeAndEstimate,
   extractDataWithAI,
+  getHistory,
 };
