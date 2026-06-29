@@ -12,6 +12,7 @@ const projectsRoutes = require("./src/modules/projects/projects.routes");
 const proposalsRoutes = require("./src/modules/proposals/proposals.routes");
 const chatRoutes = require("./src/modules/chat/chat.routes");
 const usersRoutes = require("./src/modules/users/users.routes");
+const todosRoutes = require("./src/modules/todos/todos.routes");
 const { buildSwaggerSpec } = require("./src/docs/swagger");
 const { NODE_ENV } = require("./src/config/env");
 const { getSwaggerHtml } = require("./src/docs/swaggerPage");
@@ -115,8 +116,10 @@ app.use("/api/v1/projects", projectsRoutes);
 app.use("/api/v1/proposals", proposalsRoutes);
 app.use("/api/v1/chat", chatRoutes);
 app.use("/api/v1/users", usersRoutes);
+app.use("/api/v1/todos", todosRoutes);
 app.use("/api/chat", chatRoutes);
 app.use("/api/users", usersRoutes);
+app.use("/api/todos", todosRoutes);
 app.use("/api/v1/admin", adminRoutes);
 app.use("/api/v1/reviews", reviewsRoutes);
 
@@ -142,6 +145,7 @@ app.get("/api/v1", (req, res) => {
       projects: "/api/v1/projects",
       proposals: "/api/v1/proposals",
       users: "/api/v1/users",
+      todos: "/api/v1/todos",
       ai: "/api/v1/ai",
       health: "/health",
     },

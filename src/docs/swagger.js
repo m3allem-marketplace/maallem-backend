@@ -120,6 +120,10 @@ const swaggerDocument = {
       description:
         "AI-powered task analysis and cost estimation (OpenAI extraction + rule engine)",
     },
+    {
+      name: "Todos",
+      description: "User tasks/todos management + Bearer token",
+    },
   ],
   components: {
     securitySchemes: {
@@ -1078,6 +1082,38 @@ const swaggerDocument = {
             schema: { $ref: "#/components/schemas/ErrorResponse" },
           },
         },
+      },
+      Todo: {
+        type: "object",
+        properties: {
+          _id: { type: "string" },
+          user: { type: "string" },
+          title: { type: "string", example: "Buy groceries" },
+          description: { type: "string", example: "Milk, eggs, bread" },
+          status: { type: "string", enum: ["pending", "scheduled", "completed"], example: "pending" },
+          scheduledDate: { type: "string", format: "date-time" },
+          createdAt: { type: "string", format: "date-time" },
+          updatedAt: { type: "string", format: "date-time" },
+        }
+      },
+      CreateTodoRequest: {
+        type: "object",
+        required: ["title"],
+        properties: {
+          title: { type: "string", example: "Buy groceries" },
+          description: { type: "string" },
+          status: { type: "string", enum: ["pending", "scheduled", "completed"] },
+          scheduledDate: { type: "string", format: "date-time" },
+        }
+      },
+      UpdateTodoRequest: {
+        type: "object",
+        properties: {
+          title: { type: "string" },
+          description: { type: "string" },
+          status: { type: "string", enum: ["pending", "scheduled", "completed"] },
+          scheduledDate: { type: "string", format: "date-time" },
+        }
       },
     },
   },
@@ -3806,6 +3842,74 @@ const swaggerDocument = {
           { name: "limit", in: "query", schema: { type: "integer", default: 10 } }
         ],
         responses: { 200: { description: "List of reviews" } }
+      }
+    },
+    "/todos": {
+      post: {
+        tags: ["Todos"],
+        summary: "Create a new todo",
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": { schema: { $ref: "#/components/schemas/CreateTodoRequest" } },
+          },
+        },
+        responses: {
+          201: { description: "Todo created successfully" }
+        }
+      },
+      get: {
+        tags: ["Todos"],
+        summary: "Get all todos for the user",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: "status", in: "query", schema: { type: "string", enum: ["pending", "scheduled", "completed"] } }
+        ],
+        responses: {
+          200: { description: "List of todos" }
+        }
+      }
+    },
+    "/todos/{id}": {
+      get: {
+        tags: ["Todos"],
+        summary: "Get a specific todo",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: "id", in: "path", required: true, schema: { type: "string" } }
+        ],
+        responses: {
+          200: { description: "Todo details" }
+        }
+      },
+      put: {
+        tags: ["Todos"],
+        summary: "Update a todo",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: "id", in: "path", required: true, schema: { type: "string" } }
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": { schema: { $ref: "#/components/schemas/UpdateTodoRequest" } },
+          },
+        },
+        responses: {
+          200: { description: "Todo updated successfully" }
+        }
+      },
+      delete: {
+        tags: ["Todos"],
+        summary: "Delete a todo",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: "id", in: "path", required: true, schema: { type: "string" } }
+        ],
+        responses: {
+          200: { description: "Todo deleted successfully" }
+        }
       }
     }
   },
