@@ -32,40 +32,48 @@ Your task is to read the user's story or problem description and determine:
    - If serviceType is "none": Ask the user politely to specify the problem or the trade they need help with.
    - If serviceType is detected but city is "none": Acknowledge the trade and ask the user politely to specify their city/location so we can find local workers near them.`;
 
-  const completion = await client.chat.completions.create({
-    model: "gemini-2.5-flash",
-    messages: [
-      { role: "system", content: systemPrompt },
-      { role: "user", content: story },
-    ],
-    response_format: {
-      type: "json_schema",
-      json_schema: {
-        name: "WorkerRecommendationAnalysis",
-        strict: true,
-        schema: {
-          type: "object",
-          properties: {
-            serviceType: {
-              type: "string",
-              enum: ["demolition_alteration", "masonry_building", "painting", "plumbing", "electrical", "carpentry", "none"]
+  let completion;
+  try {
+    completion = await client.chat.completions.create({
+      model: "gemini-2.5-flash",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: story },
+      ],
+      response_format: {
+        type: "json_schema",
+        json_schema: {
+          name: "WorkerRecommendationAnalysis",
+          strict: true,
+          schema: {
+            type: "object",
+            properties: {
+              serviceType: {
+                type: "string",
+                enum: ["demolition_alteration", "masonry_building", "painting", "plumbing", "electrical", "carpentry", "none"]
+              },
+              city: {
+                type: "string"
+              },
+              isExtractionComplete: {
+                type: "boolean"
+              },
+              reasonAr: {
+                type: "string"
+              }
             },
-            city: {
-              type: "string"
-            },
-            isExtractionComplete: {
-              type: "boolean"
-            },
-            reasonAr: {
-              type: "string"
-            }
-          },
-          required: ["serviceType", "city", "isExtractionComplete", "reasonAr"],
-          additionalProperties: false
+            required: ["serviceType", "city", "isExtractionComplete", "reasonAr"],
+            additionalProperties: false
+          }
         }
-      }
-    },
-  });
+      },
+    });
+  } catch (error) {
+    if (error.status === 429 || error.code === 'rate_limit_exceeded') {
+      throw new AppError("عذراً، يوجد ضغط كبير على خدمة الذكاء الاصطناعي حالياً. يرجى المحاولة بعد قليل.", 429);
+    }
+    throw error;
+  }
 
   const content = completion.choices[0]?.message?.content;
   if (!content) {

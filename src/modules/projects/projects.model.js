@@ -23,6 +23,7 @@ const projectSchema = new mongoose.Schema(
       city: { type: String, trim: true, default: "" },
     },
     budget: { type: Number, min: 0, default: 0 },
+    invoiceImage: { type: String, trim: true, default: "" },
     status: {
       type: String,
       enum: PROJECT_STATUS_VALUES,

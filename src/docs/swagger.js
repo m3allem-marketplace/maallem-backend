@@ -423,6 +423,10 @@ const swaggerDocument = {
           category: { type: "string", example: "plumbing" },
           location: { $ref: "#/components/schemas/Location" },
           budget: { type: "number", example: 500 },
+          invoiceImage: {
+            type: "string",
+            example: "https://example.com/invoice.jpg",
+          },
           status: {
             type: "string",
             enum: ["open", "closed", "in-progress"],
@@ -456,6 +460,10 @@ const swaggerDocument = {
           category: { type: "string", maxLength: 100, example: "plumbing" },
           location: { $ref: "#/components/schemas/Location" },
           budget: { type: "number", minimum: 0, example: 500 },
+          invoiceImage: {
+            type: "string",
+            example: "https://example.com/invoice.jpg",
+          },
           status: {
             type: "string",
             enum: ["open", "closed", "in-progress"],
@@ -478,6 +486,7 @@ const swaggerDocument = {
           category: { type: "string", maxLength: 100 },
           location: { $ref: "#/components/schemas/Location" },
           budget: { type: "number", minimum: 0 },
+          invoiceImage: { type: "string" },
         },
       },
       PatchProjectStatusRequest: {

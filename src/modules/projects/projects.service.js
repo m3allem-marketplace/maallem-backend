@@ -145,6 +145,7 @@ const createProject = async (userId, data) => {
     category: data.category || "",
     location: data.location || { address: "", city: "" },
     budget: data.budget ?? 0,
+    invoiceImage: data.invoiceImage || "",
     status: data.status || PROJECT_STATUS.OPEN,
   });
 
@@ -172,6 +173,7 @@ const updateProject = async (userId, id, data) => {
   if (data.category !== undefined) project.category = data.category;
   if (data.location !== undefined) project.location = data.location;
   if (data.budget !== undefined) project.budget = data.budget;
+  if (data.invoiceImage !== undefined) project.invoiceImage = data.invoiceImage;
 
   await project.save();
   return toProjectResponse(await populateProject(Project.findById(project._id)));

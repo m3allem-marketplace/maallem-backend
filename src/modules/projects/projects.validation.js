@@ -16,6 +16,7 @@ const createProjectSchema = Joi.object({
     .valid(...PROJECT_STATUS_VALUES)
     .optional(),
   workerId: Joi.string().hex().length(24).optional(),
+  invoiceImage: Joi.string().allow("").optional(),
 });
 
 const updateProjectSchema = Joi.object({
@@ -24,6 +25,7 @@ const updateProjectSchema = Joi.object({
   category: Joi.string().max(100).allow(""),
   location: Joi.alternatives().try(locationSchema, Joi.string()).optional(),
   budget: Joi.number().min(0),
+  invoiceImage: Joi.string().allow("").optional(),
 }).min(1);
 
 const patchProjectStatusSchema = Joi.object({
