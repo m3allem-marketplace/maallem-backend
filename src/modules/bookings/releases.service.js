@@ -16,16 +16,14 @@ const createReleases = async (bookingId, userId, releasesData) => {
     throw new AppError("Not authorized to manage releases for this booking", 403);
   }
 
-  // Can only create if no releases exist yet
-  const existingCount = await Release.countDocuments({ booking: bookingId });
-  if (existingCount > 0) {
-    throw new AppError("Releases already exist for this booking", 400);
-  }
+  // Find existing releases to calculate remaining allowed amount
+  const existingReleases = await Release.find({ booking: bookingId });
+  const existingSum = existingReleases.reduce((sum, r) => sum + r.amount, 0);
 
   // Validate total amount
-  const totalAmount = releasesData.reduce((sum, r) => sum + r.amount, 0);
-  if (totalAmount !== booking.price) {
-    throw new AppError("Sum of release amounts must equal the total booking price", 400);
+  const newReleasesAmount = releasesData.reduce((sum, r) => sum + r.amount, 0);
+  if (existingSum + newReleasesAmount > booking.price) {
+    throw new AppError(`Total releases amount cannot exceed the booking price. Remaining allowed: ${booking.price - existingSum}`, 400);
   }
 
   const releasesToCreate = releasesData.map((r) => ({
@@ -111,7 +109,7 @@ const approveRelease = async (bookingId, releaseId, clientId) => {
     status: { $ne: "approved" } 
   });
 
-  if (pendingReleases === 0) {
+  if (booking.escrowAmount <= 0 && pendingReleases === 0) {
     booking.status = "completed";
   } else {
     booking.status = "in_progress";
