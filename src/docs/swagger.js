@@ -1088,10 +1088,72 @@ const swaggerDocument = {
         properties: {
           _id: { type: "string" },
           user: { type: "string" },
-          title: { type: "string", example: "Buy groceries" },
-          description: { type: "string", example: "Milk, eggs, bread" },
-          status: { type: "string", enum: ["pending", "scheduled", "completed"], example: "pending" },
-          scheduledDate: { type: "string", format: "date-time" },
+          title: { type: "string", example: "صب أعمدة الدور الثاني" },
+          description: { type: "string" },
+          category: { type: "string", example: "نجارة مسلحة" },
+          priority: { type: "string", enum: ["Low", "Medium", "High", "Urgent"], example: "Medium" },
+          location: { type: "string", example: "البلوك أ" },
+          quantity: {
+            type: "object",
+            properties: {
+              target: { type: "number", example: 50 },
+              completed: { type: "number", example: 10 },
+              unit: { type: "string", example: "متر مكعب" }
+            }
+          },
+          workers: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                name: { type: "string", example: "أحمد" },
+                source: { type: "string", enum: ["Internal", "External"], example: "Internal" },
+                role: { type: "string", example: "نجار" },
+                dailyRate: { type: "number", example: 300 },
+                assignedQuantity: { type: "number", example: 25 }
+              }
+            }
+          },
+          timeline: {
+            type: "object",
+            properties: {
+              expectedStartDate: { type: "string", format: "date-time" },
+              expectedEndDate: { type: "string", format: "date-time" },
+              actualStartDate: { type: "string", format: "date-time" },
+              actualEndDate: { type: "string", format: "date-time" }
+            }
+          },
+          status: { type: "string", enum: ["Pending", "In Progress", "Paused", "Completed", "Under Inspection"], example: "Pending" },
+          inspection: {
+            type: "object",
+            properties: {
+              isApproved: { type: "boolean", example: false },
+              approvedBy: { type: "string" },
+              notes: { type: "string" }
+            }
+          },
+          attachments: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                url: { type: "string" },
+                type: { type: "string", enum: ["Before", "During", "After"] }
+              }
+            }
+          },
+          progressLogs: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                updatedBy: { type: "string" },
+                date: { type: "string", format: "date-time" },
+                addedQuantity: { type: "number" },
+                note: { type: "string" }
+              }
+            }
+          },
           createdAt: { type: "string", format: "date-time" },
           updatedAt: { type: "string", format: "date-time" },
         }
@@ -1100,10 +1162,39 @@ const swaggerDocument = {
         type: "object",
         required: ["title"],
         properties: {
-          title: { type: "string", example: "Buy groceries" },
+          title: { type: "string", example: "صب أعمدة الدور الثاني" },
           description: { type: "string" },
-          status: { type: "string", enum: ["pending", "scheduled", "completed"] },
-          scheduledDate: { type: "string", format: "date-time" },
+          category: { type: "string" },
+          priority: { type: "string", enum: ["Low", "Medium", "High", "Urgent"] },
+          location: { type: "string" },
+          quantity: {
+            type: "object",
+            properties: {
+              target: { type: "number", example: 50 },
+              unit: { type: "string", example: "متر مكعب" }
+            }
+          },
+          workers: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                name: { type: "string" },
+                source: { type: "string", enum: ["Internal", "External"] },
+                role: { type: "string" },
+                dailyRate: { type: "number" },
+                assignedQuantity: { type: "number" }
+              }
+            }
+          },
+          timeline: {
+            type: "object",
+            properties: {
+              expectedStartDate: { type: "string", format: "date-time" },
+              expectedEndDate: { type: "string", format: "date-time" }
+            }
+          },
+          status: { type: "string", enum: ["Pending", "In Progress", "Paused", "Completed", "Under Inspection"] }
         }
       },
       UpdateTodoRequest: {
@@ -1111,8 +1202,70 @@ const swaggerDocument = {
         properties: {
           title: { type: "string" },
           description: { type: "string" },
-          status: { type: "string", enum: ["pending", "scheduled", "completed"] },
-          scheduledDate: { type: "string", format: "date-time" },
+          category: { type: "string" },
+          priority: { type: "string", enum: ["Low", "Medium", "High", "Urgent"] },
+          location: { type: "string" },
+          quantity: {
+            type: "object",
+            properties: {
+              target: { type: "number" },
+              completed: { type: "number" },
+              unit: { type: "string" }
+            }
+          },
+          workers: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                name: { type: "string" },
+                source: { type: "string", enum: ["Internal", "External"] },
+                role: { type: "string" },
+                dailyRate: { type: "number" },
+                assignedQuantity: { type: "number" }
+              }
+            }
+          },
+          timeline: {
+            type: "object",
+            properties: {
+              expectedStartDate: { type: "string", format: "date-time" },
+              expectedEndDate: { type: "string", format: "date-time" },
+              actualStartDate: { type: "string", format: "date-time" },
+              actualEndDate: { type: "string", format: "date-time" }
+            }
+          },
+          status: { type: "string", enum: ["Pending", "In Progress", "Paused", "Completed", "Under Inspection"] },
+          inspection: {
+            type: "object",
+            properties: {
+              isApproved: { type: "boolean" },
+              approvedBy: { type: "string" },
+              notes: { type: "string" }
+            }
+          },
+          attachments: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                url: { type: "string" },
+                type: { type: "string", enum: ["Before", "During", "After"] }
+              }
+            }
+          },
+          progressLogs: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                updatedBy: { type: "string" },
+                date: { type: "string", format: "date-time" },
+                addedQuantity: { type: "number" },
+                note: { type: "string" }
+              }
+            }
+          }
         }
       },
     },
