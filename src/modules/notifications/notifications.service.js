@@ -132,7 +132,7 @@ const notifyProjectInvitation = async (workerId, clientName, projectTitle, proje
   try {
     return await createNotification({
       recipient: workerId,
-      type: "new_proposal",
+      type: "project_invitation",
       title: "New Project Request",
       message: `${clientName} sent you a project "${projectTitle}"`,
       data: { projectId },
